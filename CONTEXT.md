@@ -60,9 +60,21 @@ An optional end-of-Marsch instruction that replays earlier Verse — e.g. "Vers 
 Schluss". Its exact shape is undecided; when built it will be structure, not duplicated Takte.
 
 **Takt**:
-A bar. Has a time signature with an arbitrary numerator/denominator — 6/8 and 2/4 dominate
-the repertoire, but 5/8 and others occur, so the signature is not a fixed set. A Schlag's
-position within its Takt is an exact fraction, never a float or a fixed grid slot.
+A bar. Carries a **Taktart**. A Schlag's position within its Takt is an exact fraction, never
+a float or a fixed grid slot.
+
+**Taktart**:
+A time signature, with an arbitrary numerator (**Zähler**) and denominator (**Nenner**) — 6/8
+and 2/4 dominate the repertoire, but 5/8 and others occur, so the signature is not a fixed
+set. Held on the Vers for now; the repertoire's mixed meter will push it down to the Takt.
+
+**Zählzeit**:
+The beat a Takt counts in, and the unit Schläge are grouped and beamed by. Dotted in compound
+Taktarten (6/8, 9/8 count in dotted quarters), plain otherwise. Irregular Taktarten like 5/8
+group 3+2 or 2+3; that grouping is not modelled yet.
+
+**Wiederholungen**:
+How many times a Vers is played — 2 (repeated) or 1. Drawn as repeat barlines or plain ones.
 
 **Auftakt**:
 A pickup — Schläge before the first full Takt. When built, modelled as its own thing, not as
@@ -93,6 +105,31 @@ authoring convenience, not a gap in the model.
 **Ruf**:
 The family of named, measured rolls (Fünferruf, …). A roll is one Figur with a duration, never
 pre-expanded into its constituent strokes.
+
+### Notation elements
+
+The parts a Zündstoff score is drawn from. They are properties of the *drawing*, not of the
+canonical model — the model holds Schläge, and the renderer decides which of these appear.
+
+**Notenlinie**:
+The single horizontal line a Vers's Takte sit on.
+
+**Hals**:
+The vertical matchstick stroke that draws a Schlag, standing on the Notenlinie.
+
+**Balken**:
+A beam joining the Hälse of Schläge that fall on the same Zählzeit.
+
+**Taktstrich**:
+A barline. Plain, or a repeat barline opening or closing a repeated Vers.
+
+**Vorschlag**:
+The grace stroke of a Schlepp — shorter than its Hals, set just ahead of it, and played with
+the other Hand.
+
+**Wirbel**:
+The span drawn over a roll (a **Ruf**), covering its notated value, so it reads as one figure
+rather than as its constituent strokes.
 
 ### Interpretation
 
