@@ -1,35 +1,37 @@
 import type { Glyph } from "../layout/layout";
 import { layout } from "../layout/layout";
-import type { Hand, Marsch } from "../model/marsch";
+import type { Marsch } from "../model/marsch";
 
 /**
  * Der SVG-Renderer: eine stumpfe Abbildung platzierter Glyphen auf
  * SVG-Primitive. Hier wird nichts entschieden — jede Koordinate kommt aus dem
- * Layout, und der einzige Massstab ist `skalierung`.
+ * Layout, und der einzige Massstab ist `skalierung`. Insbesondere wählt der
+ * Renderer keine Höhen: auf welcher Seite der Notenlinie ein Notenkopf steht,
+ * sagt das Layout, denn daran liest man die Hand.
  */
 
 /**
- * Strichstärken und die innere Form einzelner Zeichen. Wo ein Zeichen waagrecht
- * steht, sagt das Layout; wie dick und wie hoch es ist, steht hier.
+ * Strichstärken und die innere Form einzelner Zeichen. Wo ein Zeichen steht,
+ * sagt das Layout; wie dick und wie gross es ist, steht hier.
  */
-const HALS_STAERKE = 2.4;
-const VORSCHLAG_STAERKE = 1.4;
+const HALS_STAERKE = 2.2;
+const VORSCHLAG_STAERKE = 2.2;
 const LINIEN_STAERKE = 1.2;
 const KLAMMER_STAERKE = 2.6;
 const KLAMMER_PUNKT = 1.8;
-const BALKEN_STAERKE = 4.5;
-const BALKEN_LUECKE = 2.5;
+/** Der Notenkopf. Sein Radius passt zum Abstand, den das Layout ihm zur Linie gibt. */
+const KOPF_RADIUS = 4;
+const PUNKT_RADIUS = 1.5;
 /**
- * Länge der Häkchen an den Enden des Wirbelbogens. Sie zeigen nach oben, weg
- * von den Hälsen: ein Wirbel endet oft genau auf dem nächsten Schlag, und nach
- * unten gerichtete Häkchen läsen sich dort als Kasten.
+ * Die Balken hängen an den Halsenden und stapeln sich von dort nach *oben*,
+ * zur Notenlinie hin — der unterste liegt auf der Höhe, die das Layout nennt.
  */
-const WIRBEL_HAKEN = 6;
+const BALKEN_STAERKE = 4;
+const BALKEN_LUECKE = 2.5;
 const FAHNE_BREITE = 7;
-const FAHNE_FALL = 7;
+/** Die Fahne hängt am unteren Halsende und schwingt nach rechts oben aus. */
+const FAHNE_STEIGUNG = 6;
 const FAHNE_ABSTAND = 5;
-
-const handKuerzel = (hand: Hand): string => (hand === "rechts" ? "r" : "l");
 
 const Taktstrich = ({ glyph }: { glyph: Extract<Glyph, { typ: "taktstrich" }> }) => (
   <>
@@ -80,6 +82,10 @@ const zeichne = (glyph: Glyph) => {
       );
     case "taktstrich":
       return <Taktstrich glyph={glyph} />;
+    case "notenkopf":
+      return (
+        <circle cx={glyph.x} cy={glyph.y} r={KOPF_RADIUS} fill="currentColor" stroke="none" />
+      );
     case "hals":
       return (
         <line
@@ -100,13 +106,9 @@ const zeichne = (glyph: Glyph) => {
           strokeWidth={VORSCHLAG_STAERKE}
         />
       );
-    case "wirbel":
+    case "punkt":
       return (
-        <path
-          d={`M ${glyph.x1} ${glyph.y - WIRBEL_HAKEN} L ${glyph.x1} ${glyph.y} L ${glyph.x2} ${glyph.y} L ${glyph.x2} ${glyph.y - WIRBEL_HAKEN}`}
-          fill="none"
-          strokeWidth={LINIEN_STAERKE}
-        />
+        <circle cx={glyph.x} cy={glyph.y} r={PUNKT_RADIUS} fill="currentColor" stroke="none" />
       );
     case "balken":
       return (
@@ -115,7 +117,7 @@ const zeichne = (glyph: Glyph) => {
             <rect
               key={i}
               x={glyph.x1}
-              y={glyph.y + i * (BALKEN_STAERKE + BALKEN_LUECKE)}
+              y={glyph.y - BALKEN_STAERKE - i * (BALKEN_STAERKE + BALKEN_LUECKE)}
               width={glyph.x2 - glyph.x1}
               height={BALKEN_STAERKE}
               fill="currentColor"
@@ -131,26 +133,13 @@ const zeichne = (glyph: Glyph) => {
             <line
               key={i}
               x1={glyph.x}
-              y1={glyph.y + i * FAHNE_ABSTAND}
+              y1={glyph.y - i * FAHNE_ABSTAND}
               x2={glyph.x + FAHNE_BREITE}
-              y2={glyph.y + i * FAHNE_ABSTAND + FAHNE_FALL}
+              y2={glyph.y - i * FAHNE_ABSTAND - FAHNE_STEIGUNG}
               strokeWidth={HALS_STAERKE}
             />
           ))}
         </>
-      );
-    case "hand":
-      return (
-        <text
-          x={glyph.x}
-          y={glyph.y}
-          fontSize={12}
-          fill="currentColor"
-          textAnchor="middle"
-          dominantBaseline="middle"
-        >
-          {handKuerzel(glyph.hand)}
-        </text>
       );
   }
 };

@@ -11,9 +11,9 @@ English translations are avoided.
 
 Domain model under active design. The **first slice** is deliberately minimal: build one
 Marsch in memory and render it as Zündstoffnoten. In scope for the slice: Marsch, Vers, Takt,
-Schlag, Figur (Dupfe / Schlepp / Fünferruf), Hand, notated value. Deferred (terms kept here
-for orientation, not built yet): dynamics, Pause, Auftakt, Schluss, Tempo, Vortrag,
-Hieroglyphen rendering + import, playback, library/persistence, Pfeife.
+Schlag, Figur (Dupfe / Schlepp), Hand, notated value. Deferred (terms kept here for
+orientation, not built yet): the Ruf family, dynamics, Pause, Auftakt, Schluss, Tempo,
+Vortrag, Hieroglyphen rendering + import, playback, library/persistence, Pfeife.
 
 Stack: TypeScript + React + Vite, notation as inline SVG, no backend, Vitest.
 
@@ -95,16 +95,17 @@ seed entries:
 
 - **Dupfe**: a single stroke.
 - **Schlepp**: a flam.
-- **Fünferruf**: a five-stroke roll. Member of the **Ruf** family (named, measured rolls).
 
 **Hand**:
-Which hand plays the Schlag — left or right. **Always stored explicitly** on every Schlag,
-even though the tradition lets a reader infer it. Auto-filling by the alternation rule is an
-authoring convenience, not a gap in the model.
+Which hand plays the Schlag — left or right. Zündstoffnoten writes the hand down: it is the
+**height of the Notenkopf** relative to the Notenlinie — rechts above the line, links below.
+Nothing is left to the reader to infer, so the model stores it explicitly on every Schlag.
+Auto-filling by the alternation rule is an authoring convenience, not a gap in the model.
 
-**Ruf**:
-The family of named, measured rolls (Fünferruf, …). A roll is one Figur with a duration, never
-pre-expanded into its constituent strokes.
+**Ruf** (deferred):
+The family of measured rolls, counted by their number of strokes — the repertoire uses 3, 5,
+7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
+strokes. Not modelled or drawn yet; how it is written is not settled.
 
 ### Notation elements
 
@@ -112,24 +113,44 @@ The parts a Zündstoff score is drawn from. They are properties of the *drawing*
 canonical model — the model holds Schläge, and the renderer decides which of these appear.
 
 **Notenlinie**:
-The single horizontal line a Vers's Takte sit on.
+The single horizontal line a Vers's Takte sit on. Schläge are drawn against it, not on it: the
+line runs *through* the notation rather than under it.
+
+**Notenkopf**:
+The filled round head that draws a Schlag. It sits at one of exactly two heights — just above
+the Notenlinie for a Schlag played **rechts**, just below it for **links**. The Notenkopf is
+where the Hand is written; there are no `r`/`l` letters in the notation.
 
 **Hals**:
-The vertical matchstick stroke that draws a Schlag, standing on the Notenlinie.
+The stem hanging from a Notenkopf. Always drawn **downward**, whichever side of the Notenlinie
+its Notenkopf sits on, so that every Hals of a group reaches the same Balken.
 
 **Balken**:
-A beam joining the Hälse of Schläge that fall on the same Zählzeit.
+A beam joining the Hälse of Schläge that fall on the same Zählzeit. It runs **below** the
+Notenlinie, at the lower end of the Hälse.
+
+**Fahne**:
+The hook on the lower end of a Hals, for a Schlag short enough to need one but not beamed to a
+neighbour. One for an Achtel, two for a Sechzehntel. A dotted value carries as many Fahnen as
+its undotted base.
+
+**Punkt**:
+The augmentation dot. It stands immediately right of the Notenkopf, at the head's own height —
+not by the Hals and not by the Balken.
 
 **Taktstrich**:
 A barline. Plain, or a repeat barline opening or closing a repeated Vers.
 
 **Vorschlag**:
-The grace stroke of a Schlepp — shorter than its Hals, set just ahead of it, and played with
-the other Hand.
+The grace stroke of a Schlepp, played with the other Hand. Not written as a note of its own: a
+short **vertical line rising from the Notenkopf** of the Schlag it belongs to. Because it hangs
+off the head rather than standing beside it, it carries no Hand height — the reader infers the
+Vorschlag's Hand from the Schlepp's.
 
-**Wirbel**:
-The span drawn over a roll (a **Ruf**), covering its notated value, so it reads as one figure
-rather than as its constituent strokes.
+**Wirbel** (deferred):
+The mark that shows a **Ruf** is one figure rather than its constituent strokes. Not a bracket
+above the Hälse — the originals slash the Hals and slur to the Schlag the roll lands on — but
+the exact drawing is unsettled and deferred with the Ruf.
 
 ### Interpretation
 

@@ -16,8 +16,12 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * Schlepp ist eine eigene Figur, keine verzierte Dupfe. Das volle Vokabular
  * kommt später — erweitern heisst hier eintragen und in `figurZeichnung`
  * (siehe Layout) die Geometrie ergänzen.
+ *
+ * Die Ruf-Familie fehlt bewusst: wie ein Wirbel geschrieben wird, ist noch
+ * nicht geklärt (siehe `CONTEXT.md`), und eine Figur, die wir nicht zeichnen
+ * können, soll das Modell nicht behaupten.
  */
-export type Figur = "Dupfe" | "Schlepp" | "Fünferruf";
+export type Figur = "Dupfe" | "Schlepp";
 
 /** Ein Schlag: das atomare Ereignis des Modells. */
 export interface Schlag {

@@ -4,8 +4,12 @@ import { andereHand } from "../model/marsch";
 
 /**
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Übertragung aus
- * dem Repertoire, sondern eine Übung, die alle drei Figuren dieser Iteration
- * zeigt — Dupfe, Schlepp und Fünferruf, in 6/8 und in 2/4.
+ * dem Repertoire, sondern eine Übung, die beide Figuren dieser Iteration zeigt
+ * — Dupfe und Schlepp — auf beiden Händen, in 6/8 und in 2/4.
+ *
+ * Die Balkengruppen sind bewusst durchweg gleichwertig: Balkenstummel für eine
+ * gemischte Gruppe gibt es noch nicht, und das Layout wirft, statt sie falsch
+ * zu zeichnen.
  */
 
 const schlag = (
@@ -38,10 +42,10 @@ export const uebungsmarsch: Marsch = {
         wechselnd(["Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe"], "rechts", 8),
         // Schlepp auf jede Zählzeit.
         wechselnd(["Schlepp", "Dupfe", "Dupfe", "Schlepp", "Dupfe", "Dupfe"], "rechts", 8),
-        // Fünferruf über die erste Zählzeit, dann drei Achtel.
+        // Punktierte Viertel über die erste Zählzeit, dann drei Achtel.
         {
           schlaege: [
-            schlag("Fünferruf", "rechts", [0, 1], [3, 8]),
+            schlag("Schlepp", "rechts", [0, 1], [3, 8]),
             schlag("Dupfe", "links", [3, 8], [1, 8]),
             schlag("Dupfe", "rechts", [4, 8], [1, 8]),
             schlag("Dupfe", "links", [5, 8], [1, 8]),
@@ -62,10 +66,11 @@ export const uebungsmarsch: Marsch = {
       takte: [
         // Acht Sechzehntel — eine Balkengruppe je Viertel.
         wechselnd(Array.from({ length: 8 }, () => "Dupfe" as Figur), "rechts", 16),
+        // Zwei Viertel — ohne Balken, der Schlepp diesmal auf der linken Hand.
         {
           schlaege: [
-            schlag("Schlepp", "rechts", [0, 1], [1, 4]),
-            schlag("Fünferruf", "links", [1, 4], [1, 4]),
+            schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+            schlag("Schlepp", "links", [1, 4], [1, 4]),
           ],
         },
       ],

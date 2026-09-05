@@ -12,11 +12,31 @@ describe("Übungsmarsch", () => {
     }
   });
 
-  it("zeigt alle drei Figuren dieser Iteration", () => {
+  it("zeigt beide Figuren dieser Iteration", () => {
     const figuren = new Set(
-      layout(uebungsmarsch).glyphen.flatMap((g) => (g.typ === "hals" ? [g.figur] : [])),
+      uebungsmarsch.verse.flatMap((v) => v.takte.flatMap((t) => t.schlaege.map((s) => s.figur))),
     );
-    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp", "Fünferruf"]));
+    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp"]));
+  });
+
+  it("zeigt beide Hände — die Notenköpfe liegen über und unter der Linie", () => {
+    const glyphen = layout(uebungsmarsch).glyphen;
+    const linie = glyphen.find((g) => g.typ === "notenlinie")!;
+    const koepfe = glyphen.filter((g) => g.typ === "notenkopf");
+
+    expect(koepfe.some((k) => k.y < linie.y)).toBe(true);
+    expect(koepfe.some((k) => k.y > linie.y)).toBe(true);
+  });
+
+  it("zeigt einen Schlepp auf jeder Hand", () => {
+    const schlepps = uebungsmarsch.verse.flatMap((v) =>
+      v.takte.flatMap((t) => t.schlaege.filter((s) => s.figur === "Schlepp").map((s) => s.hand)),
+    );
+    expect(new Set(schlepps)).toEqual(new Set(["rechts", "links"]));
+  });
+
+  it("hält jede Balkengruppe gleichwertig — Balkenstummel gibt es noch nicht", () => {
+    expect(() => layout(uebungsmarsch)).not.toThrow();
   });
 
   it("hat einen wiederholten und einen einmal gespielten Vers", () => {

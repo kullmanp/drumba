@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
-import { layout, UngültigerTaktError } from "./layout";
+import { layout, UngleicheBalkengruppeError, UngültigerTaktError } from "./layout";
 
 // --- Halterungen -----------------------------------------------------------
 
@@ -108,48 +108,72 @@ describe("Schläge im Takt", () => {
     expect(c).toBeCloseTo(a! * 3, 10);
   });
 
-  it("zeichnet Hälse nach oben, auf der Notenlinie stehend", () => {
+  it("hängt die Hälse nach unten, unter die Notenlinie", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
     const linie = glyphen(m, "notenlinie")[0]!;
 
     for (const hals of glyphen(m, "hals")) {
-      expect(hals.yUnten).toBeCloseTo(linie.y, 10);
+      expect(hals.yUnten).toBeGreaterThan(linie.y);
       expect(hals.yOben).toBeLessThan(hals.yUnten);
     }
   });
 
-  it("trägt Figur und Hand jedes Schlages am Hals", () => {
-    const m = marsch("Zwei", vers([2, 4], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Schlepp", "links", [1, 8], [1, 8]),
-      ],
-    }));
+  it("führt jeden Hals bis an den Notenkopf seines Schlages", () => {
+    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
     const haelse = glyphen(m, "hals");
+    const koepfe = glyphen(m, "notenkopf");
 
-    expect(haelse.map((h) => [h.figur, h.hand])).toEqual([
-      ["Dupfe", "rechts"],
-      ["Schlepp", "links"],
-    ]);
+    expect(haelse.map((h) => [h.x, h.yOben])).toEqual(koepfe.map((k) => [k.x, k.y]));
+  });
+
+  it("endet mit allen Hälsen eines Taktes gleich tief — sie teilen den Balken", () => {
+    // Rechts und links wechseln, die Köpfe liegen also verschieden hoch.
+    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
+    const [erster, ...weitere] = glyphen(m, "hals");
+
+    expect(new Set(weitere.map((h) => h.yOben)).size).toBe(2);
+    for (const hals of weitere) expect(hals.yUnten).toBeCloseTo(erster!.yUnten, 10);
   });
 });
 
-describe("Hand", () => {
-  it("zeigt die Hand jedes Schlages an, unter der Notenlinie", () => {
-    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
-    const linie = glyphen(m, "notenlinie")[0]!;
-    const haende = glyphen(m, "hand");
+describe("Notenkopf", () => {
+  const gemischt = marsch("Zwei", vers([2, 4], 1, {
+    schlaege: [
+      schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+      schlag("Schlepp", "links", [1, 8], [1, 8]),
+    ],
+  }));
 
-    expect(haende.map((h) => h.hand)).toEqual(["rechts", "links", "rechts", "links"]);
-    for (const hand of haende) expect(hand.y).toBeGreaterThan(linie.y);
+  it("gibt jedem Schlag genau einen Kopf, von links nach rechts", () => {
+    const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
+    const koepfe = glyphen(m, "notenkopf");
+
+    expect(koepfe).toHaveLength(6);
+    expect(abstaende(koepfe.map((k) => k.x)).every((d) => d > 0)).toBe(true);
   });
 
-  it("richtet die Handangabe am Hals ihres Schlages aus", () => {
-    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
-    const haelse = glyphen(m, "hals");
-    const haende = glyphen(m, "hand");
+  it("setzt einen rechten Schlag über die Notenlinie und einen linken darunter", () => {
+    const linie = glyphen(gemischt, "notenlinie")[0]!;
+    const [rechts, links] = glyphen(gemischt, "notenkopf");
 
-    expect(haende.map((h) => h.x)).toEqual(haelse.map((h) => h.x));
+    expect(rechts!.hand).toBe("rechts");
+    expect(rechts!.y).toBeLessThan(linie.y);
+    expect(links!.hand).toBe("links");
+    expect(links!.y).toBeGreaterThan(linie.y);
+  });
+
+  it("hält beide Höhen gleich weit von der Linie entfernt", () => {
+    const linie = glyphen(gemischt, "notenlinie")[0]!;
+    const [rechts, links] = glyphen(gemischt, "notenkopf");
+
+    expect(linie.y - rechts!.y).toBeCloseTo(links!.y - linie.y, 10);
+  });
+
+  it("schreibt die Hand nirgends sonst hin — die Höhe sagt sie", () => {
+    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
+    const traeger = layout(m).glyphen.filter((g) => "hand" in g);
+
+    expect(traeger.map((g) => g.typ)).toEqual(Array(4).fill("notenkopf"));
   });
 });
 
@@ -256,7 +280,8 @@ describe("Reihenfolge der Verse", () => {
     );
     const alle = layout(m).glyphen;
     const linien = glyphen(m, "notenlinie");
-    const versVon = (g: Glyph) => (g.typ === "hals" && g.yUnten === linien[1]!.y ? 2 : 1);
+    const grenze = (linien[0]!.y + linien[1]!.y) / 2;
+    const versVon = (g: Glyph) => (g.typ === "hals" && g.yUnten > grenze ? 2 : 1);
     const haelse = alle.filter((g) => g.typ === "hals");
 
     expect(haelse.map(versVon)).toEqual([1, 1, 1, 1, 1, 1, 2, 2, 2, 2]);
@@ -272,26 +297,42 @@ describe("Schlepp", () => {
     ],
   }));
 
-  it("setzt den Vorschlag vor den Hals seines Schlages", () => {
+  it("stellt den Vorschlag senkrecht über den Notenkopf seines Schlages", () => {
     const [vorschlag, ...weitere] = glyphen(m, "vorschlag");
-    const haelse = glyphen(m, "hals");
-    const achtelAbstand = haelse[2]!.x - haelse[1]!.x;
+    const kopf = glyphen(m, "notenkopf")[0]!;
 
     expect(weitere).toEqual([]);
-    expect(vorschlag!.x).toBeLessThan(haelse[0]!.x);
-    expect(haelse[0]!.x - vorschlag!.x).toBeLessThan(achtelAbstand);
+    expect(vorschlag!.x).toBeCloseTo(kopf.x, 10);
+    expect(vorschlag!.yUnten).toBeLessThan(kopf.y);
+    expect(vorschlag!.yOben).toBeLessThan(vorschlag!.yUnten);
   });
 
-  it("spielt den Vorschlag mit der anderen Hand", () => {
-    expect(glyphen(m, "vorschlag")[0]!.hand).toBe("links");
-  });
-
-  it("zeichnet den Vorschlag kürzer als den Hauptschlag", () => {
+  it("setzt den Vorschlag an den Kopf an, statt über ihm zu schweben", () => {
     const vorschlag = glyphen(m, "vorschlag")[0]!;
-    const hauptschlag = glyphen(m, "hals")[0]!;
+    const kopf = glyphen(m, "notenkopf")[0]!;
+    const laenge = vorschlag.yUnten - vorschlag.yOben;
 
-    expect(vorschlag.yUnten).toBeCloseTo(hauptschlag.yUnten, 10);
-    expect(vorschlag.yOben).toBeGreaterThan(hauptschlag.yOben);
+    expect(kopf.y - vorschlag.yUnten).toBeLessThan(laenge);
+  });
+
+  it("zeichnet den Strich auch über einem linken Notenkopf nach oben", () => {
+    const linkerSchlepp = marsch("Links", vers([2, 4], 1, {
+      schlaege: [schlag("Schlepp", "links", [0, 1], [1, 4])],
+    }));
+    const vorschlag = glyphen(linkerSchlepp, "vorschlag")[0]!;
+    const kopf = glyphen(linkerSchlepp, "notenkopf")[0]!;
+    const linie = glyphen(linkerSchlepp, "notenlinie")[0]!;
+
+    expect(kopf.y).toBeGreaterThan(linie.y);
+    expect(vorschlag.yUnten).toBeLessThan(kopf.y);
+    expect(vorschlag.yOben).toBeLessThan(linie.y);
+  });
+
+  it("hält den Vorschlag kürzer als den Hals, an dem er hängt", () => {
+    const vorschlag = glyphen(m, "vorschlag")[0]!;
+    const hals = glyphen(m, "hals")[0]!;
+
+    expect(vorschlag.yUnten - vorschlag.yOben).toBeLessThan(hals.yUnten - hals.yOben);
   });
 
   it("gibt einer Dupfe keinen Vorschlag", () => {
@@ -300,46 +341,49 @@ describe("Schlepp", () => {
   });
 });
 
-describe("Fünferruf", () => {
-  const m = marsch("Rufe", vers([6, 8], 1, {
+describe("Punkt", () => {
+  const punktiert = marsch("Punktiert", vers([6, 8], 1, {
     schlaege: [
-      schlag("Fünferruf", "rechts", [0, 1], [3, 8]),
-      schlag("Dupfe", "links", [3, 8], [1, 8]),
-      schlag("Dupfe", "rechts", [4, 8], [1, 8]),
-      schlag("Fünferruf", "links", [5, 8], [1, 8]),
+      schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+      schlag("Dupfe", "links", [3, 8], [3, 8]),
     ],
   }));
 
-  it("spannt den Wirbel über den notierten Wert des Rufes", () => {
-    const haelse = glyphen(m, "hals");
-    const achtelAbstand = haelse[2]!.x - haelse[1]!.x;
-    const [lang, kurz] = glyphen(m, "wirbel");
-
-    expect(kurz!.x2 - kurz!.x1).toBeCloseTo(achtelAbstand, 10);
-    expect(lang!.x2 - lang!.x1).toBeCloseTo(achtelAbstand * 3, 10);
+  it("gibt jedem punktierten Wert einen Punkt", () => {
+    expect(glyphen(punktiert, "punkt")).toHaveLength(2);
   });
 
-  it("beginnt den Wirbel am Hals seines Schlages", () => {
-    const haelse = glyphen(m, "hals");
-    const wirbel = glyphen(m, "wirbel");
+  it("setzt den Punkt rechts neben den Notenkopf, auf dessen Höhe", () => {
+    const koepfe = glyphen(punktiert, "notenkopf");
+    const punkte = glyphen(punktiert, "punkt");
 
-    expect(wirbel[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
-    expect(wirbel[1]!.x1).toBeCloseTo(haelse[3]!.x, 10);
+    punkte.forEach((punkt, i) => {
+      expect(punkt.x).toBeGreaterThan(koepfe[i]!.x);
+      expect(punkt.y).toBeCloseTo(koepfe[i]!.y, 10);
+    });
   });
 
-  it("zeichnet den Wirbel über den Hälsen", () => {
-    const hals = glyphen(m, "hals")[0]!;
-    expect(glyphen(m, "wirbel")[0]!.y).toBeLessThanOrEqual(hals.yOben);
+  it("hält den Punkt näher am Kopf als der nächste Schlag steht", () => {
+    const koepfe = glyphen(punktiert, "notenkopf");
+    const punkt = glyphen(punktiert, "punkt")[0]!;
+
+    expect(punkt.x - koepfe[0]!.x).toBeLessThan(koepfe[1]!.x - koepfe[0]!.x);
   });
 
-  it("gibt einer Dupfe und einem Schlepp keinen Wirbel", () => {
-    const ohneRuf = marsch("Ohne Ruf", vers([2, 4], 1, {
+  it("gibt einem unpunktierten Wert keinen Punkt", () => {
+    const glatt = marsch("Glatt", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
+    expect(glyphen(glatt, "punkt")).toEqual([]);
+  });
+
+  it("erkennt auch die punktierte Achtel", () => {
+    const m = marsch("Punktierte Achtel", vers([3, 8], 1, {
       schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Schlepp", "links", [1, 8], [1, 8]),
+        schlag("Dupfe", "rechts", [0, 1], [3, 16]),
+        schlag("Dupfe", "links", [3, 16], [1, 16]),
+        schlag("Dupfe", "rechts", [1, 4], [1, 8]),
       ],
     }));
-    expect(glyphen(ohneRuf, "wirbel")).toEqual([]);
+    expect(glyphen(m, "punkt")).toHaveLength(1);
   });
 });
 
@@ -402,11 +446,14 @@ describe("Balken", () => {
     expect(balken[0]!.x2).toBeCloseTo(haelse[4]!.x, 10);
   });
 
-  it("legt den Balken an die Halsenden", () => {
+  it("legt den Balken an die unteren Halsenden, unter die Notenlinie", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 1, dupfenTakt(6, [1, 8])));
     const hals = glyphen(m, "hals")[0]!;
+    const linie = glyphen(m, "notenlinie")[0]!;
+    const balken = glyphen(m, "balken")[0]!;
 
-    expect(glyphen(m, "balken")[0]!.y).toBeCloseTo(hals.yOben, 10);
+    expect(balken.y).toBeCloseTo(hals.yUnten, 10);
+    expect(balken.y).toBeGreaterThan(linie.y);
   });
 });
 
@@ -465,14 +512,14 @@ describe("Wiederholungsklammer", () => {
     }
   });
 
-  it("verteilt die zwei Punkte um die Mitte des Striches", () => {
+  it("verteilt die zwei Punkte um die Notenlinie", () => {
     const [anfang] = glyphen(wiederholt, "taktstrich");
-    const mitte = (anfang!.yOben + anfang!.yUnten) / 2;
+    const linie = glyphen(wiederholt, "notenlinie")[0]!;
     const [oben, unten] = anfang!.punkte;
 
-    expect(oben!.y).toBeLessThan(mitte);
-    expect(unten!.y).toBeGreaterThan(mitte);
-    expect(mitte - oben!.y).toBeCloseTo(unten!.y - mitte, 10);
+    expect(oben!.y).toBeLessThan(linie.y);
+    expect(unten!.y).toBeGreaterThan(linie.y);
+    expect(linie.y - oben!.y).toBeCloseTo(unten!.y - linie.y, 10);
   });
 });
 
@@ -518,14 +565,14 @@ describe("Fahne", () => {
     expect(glyphen(m, "fahne")).toEqual([]);
   });
 
-  it("setzt die Fahne ans obere Ende des Halses", () => {
+  it("setzt die Fahne ans untere Ende des Halses", () => {
     const m = marsch("Einzelnes Achtel", vers([2, 4], 1, {
       schlaege: [
         schlag("Dupfe", "rechts", [0, 1], [1, 8]),
         schlag("Dupfe", "links", [1, 4], [1, 4]),
       ],
     }));
-    expect(glyphen(m, "fahne")[0]!.y).toBeCloseTo(glyphen(m, "hals")[0]!.yOben, 10);
+    expect(glyphen(m, "fahne")[0]!.y).toBeCloseTo(glyphen(m, "hals")[0]!.yUnten, 10);
   });
 });
 
@@ -540,15 +587,38 @@ describe("Balkenzahl", () => {
     expect(glyphen(m, "balken").map((b) => b.anzahl)).toEqual([2, 2]);
   });
 
-  it("zieht über eine gemischte Gruppe nur die durchgehenden Balken", () => {
-    const m = marsch("Gemischt", vers([2, 4], 1, {
+});
+
+describe("Gemischte Balkengruppe", () => {
+  // Achtel und Sechzehntel unter einem Balken: die Sechzehntel bräuchte einen
+  // Balkenstummel. Den gibt es noch nicht, also wird geworfen statt gelogen.
+  const gemischt = marsch(
+    "Gemischt",
+    vers([2, 4], 1, dupfenTakt(4, [1, 8])),
+    vers([2, 4], 1, {
       schlaege: [
         schlag("Dupfe", "rechts", [0, 1], [1, 8]),
         schlag("Dupfe", "links", [1, 8], [1, 16]),
         schlag("Dupfe", "rechts", [3, 16], [1, 16]),
         schlag("Dupfe", "links", [1, 4], [1, 4]),
       ],
-    }));
-    expect(glyphen(m, "balken").map((b) => b.anzahl)).toEqual([1]);
+    }),
+  );
+
+  it("zeichnet die Gruppe nicht still falsch, sondern wirft", () => {
+    expect(() => layout(gemischt)).toThrow(UngleicheBalkengruppeError);
+  });
+
+  it("benennt Vers und Takt des Fehlers", () => {
+    expect(() => layout(gemischt)).toThrow(/Vers 2.*Takt 1/);
+  });
+
+  it("nennt die Werte, die nicht zusammenpassen", () => {
+    expect(() => layout(gemischt)).toThrow(/1\/8.*1\/16/);
+  });
+
+  it("lässt eine Gruppe aus gleichen Werten durch", () => {
+    const gleich = marsch("Gleich", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
+    expect(() => layout(gleich)).not.toThrow();
   });
 });
