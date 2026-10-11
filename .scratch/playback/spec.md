@@ -1,6 +1,6 @@
 # Playback — first iteration
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -161,3 +161,19 @@ one.
 
 Next after this iteration: authoring (writing a Marsch in the app), then persistence (save and
 load), which is when Tempo moves onto the Marsch.
+
+## Comments
+
+**Closed 2026-10-11.** Built in `19610eb`; looks and sounds right for a first iteration. Every
+user story and every coverage item is met. Notes beyond the spec:
+
+- **`UngültigerTaktError` moved into the model** beside `taktUeberlauf`, so playback can reject
+  an overrunning Takt without importing the layout. `dividiere` was added to `bruch.ts`.
+- **`Anschlag` is an implementation term**, not a domain one, so it is documented in code and
+  not in `GLOSSARY.md`.
+- **Sound constants are first guesses, accepted by ear:** Vorschlag 30 ms ahead at half volume,
+  a 2.2 kHz bandpassed noise burst with 120 ms decay.
+- **Known loose ends from review:** the overrun walk over a Marsch is duplicated between layout
+  and playback and could become one model function; an invalid Marsch would throw from the Play
+  handler with no UI feedback; the adapter detects the end by the last Anschlag's `onended`,
+  which assumes every Anschlag decays equally long — revisit when the Hände sound different.
