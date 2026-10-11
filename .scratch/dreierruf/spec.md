@@ -1,6 +1,6 @@
 # Dreierruf — the Tagwachtstreich of ZicZac Vers 1, Takt 3
 
-Status: ready-for-agent
+Status: done
 
 Blocked by: `.scratch/tole/spec.md`
 
@@ -171,3 +171,22 @@ passed. Rejected findings:
 
 **2026-10-11, tuned by ear.** At 0.75 the rolled Dupfe drowned the rhythm. They are now at 0.4,
 between the Vorschlag (0.3) and the Double's soft Dupfe (0.5).
+
+**Closed 2026-10-11.** Specified in `d94d7ec` with ADR-0004, built in `b80dbd4` (the Dreierruf
+in the model, its mark in the layout and renderer, its rolled Dupfe in playback, the
+Tagwachtstreich in the Übungsmarsch), with fixes in `f5da8f1` (the mark centred on the layout's
+x) and `39d38d4` (rolled Dupfe at 0.4, tuned by ear). Where the result departs from the spec:
+
+- The mark sits on the other Hand's side at half the Kopf distance from the Notenlinie, as in
+  the original, not at the full Kopf height.
+- The mark is two small heads side by side on short Hälse joined by three Balken, as in the
+  original, not two heads stacked.
+
+Loose ends:
+
+- `GLOSSARY.md` and ADR-0004 are out of date: **Ruf** says only the Fünferruf is modelled and
+  that a Landung is always a Dupfe, but a Dreierruf's Landung has Figur `Dreierruf`.
+- The abgesetzt Dreierruf, the Siebnerruf and the rest of ZicZac Takt 4 are not built.
+- **Playback from anywhere.** Listening to one passage, such as the Tagwachtstreich, is becoming
+  impractical when playback can only start from the beginning. It should be possible to start
+  wherever one likes, by setting a cursor or something similar.

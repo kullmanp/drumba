@@ -1,6 +1,6 @@
 # Tole — the Quintole of ZicZac Vers 1, Takt 3
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -134,3 +134,18 @@ Quintole". Screenshot `drumba-takt3.png` beside `ziczac-takt3.png`.
   `UngueltigeToleError`, not as a gap in the Takt.
 - Loose end: the Fünferruf's Landung check still measures exactly an Achtel; a Ruf inside a
   Tole would be rejected. No original needs it yet.
+
+**Closed 2026-10-11.** Specified in `d94d7ec`, built in `46751d9` (Tolen in the model, the
+Tole's number in the layout, ZicZac Vers 1, Takt 3 in the Übungsmarsch), with a fix in
+`f5da8f1`: the fill check had stopped seeing an Auftakt's Schläge out of order. Where the result
+departs from the spec:
+
+- The number is a new `toleZahl` glyph, whose `y` is its top edge, drawn upright, not
+  `rufZahl`.
+- The same Schläge without a Tole are rejected as an overrun (`UngueltigerTaktError`), not as an
+  overlap.
+
+Loose ends:
+
+- A Fünferruf inside a Tole would be rejected: its Landung check measures exactly an Achtel.
+- A Tole number under a single Notenkopf, bracketed Tolen and nested Tolen are not built.
