@@ -1,6 +1,6 @@
 # Starttakt — playback from a chosen Takt
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -145,3 +145,17 @@ Raised on 2026-10-11 while tuning the Dreierruf by ear (see the closing note of
 
 "Starttakt" is a word for an implementation concept, not a term of the tradition, so it belongs
 on its definition in code and not in `GLOSSARY.md`.
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `a882022`, settled in `611e713`, built in `cf92850` (the
+Starttakt in the model, playback and layout, its mark and click targets in the renderer and
+`App`). Where the result departs from the spec:
+
+- The Starttakt, its `UnbekannterStarttaktError` and its check live in `src/model/starttakt.ts`,
+  shared by playback and layout; the Marsch itself is unchanged.
+- The plan runs the whole Marsch silently up to the Starttakt and measures time from there, so
+  its tail matches the full plan exactly, the Dreierruf's gap included.
+- Each `taktflaeche` carries a tooltip naming its Vers and Takt, which the spec did not ask for.
+
+Loose ends: the mark's colour is chosen by eye, and a Starttakt is not kept across page loads.
