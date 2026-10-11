@@ -97,6 +97,15 @@ The family of measured rolls, counted by their number of strokes — the reperto
 7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
 strokes. Not modelled or drawn yet; how it is written is not settled.
 
+**Fünferruf** (mit Schlepp):
+The most common Ruf. Five strokes: Schlepp rechts, Dupfe rechts, Dupfe links, Dupfe links,
+Dupfe rechts. The first four are evenly spaced and fill exactly an Achtel; the fifth lands on
+the Achtel's end. So in 6/8, where an Achtel is a third of a Zählzeit instead of a half, it is
+played faster than in 2/4. Practically always played starting rechts; the mirrored version
+starting links is rare and hard to play, but legitimate. Written as a Schlepp whose Hals
+carries a Wirbel, with a "5" and a slur to the fifth stroke.
+A **Fünferruf ohne Schlepp** (no Vorschlag on the first stroke) also exists; deferred.
+
 ### Notation elements
 
 The parts a Zündstoff score is drawn from. They are properties of the _drawing_, not of the
@@ -142,10 +151,16 @@ Played softer than the main stroke and a short, fixed moment _before_ it, so the
 still falls on the Schlag's position. That moment is a gesture, not a rhythmic value: it does
 not shrink or grow with Tempo.
 
-**Wirbel** (deferred):
-The mark that shows a **Ruf** is one figure rather than its constituent strokes. Not a bracket
-above the Hälse — the originals slash the Hals and slur to the Schlag the roll lands on — but
-the exact drawing is unsettled and deferred with the Ruf.
+**Wirbel**:
+The mark that shows a **Ruf** is one figure rather than its constituent strokes: slashes across
+the Ruf's Hals, its stroke count written above, and a slur to the **Landung**. Not a bracket
+above the Hälse.
+
+**Landung**:
+The last stroke of a Ruf — the Schlag the roll lands on. It is a Schlag of its own, with its
+own Notenkopf, value and Balken, played with the Hand the Ruf started with. It may fall in the
+next Takt, across the Taktstrich.
+_Avoid_: landing note, Endschlag.
 
 ### Interpretation
 
