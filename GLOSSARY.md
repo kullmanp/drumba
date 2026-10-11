@@ -102,8 +102,9 @@ Auto-filling by the alternation rule is an authoring convenience, not a gap in t
 **Ruf**:
 The family of measured rolls, counted by their number of strokes — the repertoire uses 3, 5,
 7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
-strokes; its last stroke is the **Landung**, a Schlag of its own. Only the **Fünferruf** is
-modelled so far.
+strokes; its last stroke is the **Landung**, a Schlag of its own, and always a Dupfe. Only the **Fünferruf** is
+modelled so far. The traditional "Vierer" and "Achter" are not Rufe of their own but a
+Dreierruf and a Siebnerruf with a **Nachschlag**.
 
 **Fünferruf** (mit Schlepp):
 The most common Ruf. Five strokes: Schlepp rechts, Dupfe rechts, Dupfe links, Dupfe links,
@@ -113,6 +114,36 @@ played faster than in 2/4. Practically always played starting rechts; the mirror
 starting links is rare and hard to play, but legitimate. Written as a Schlepp whose Hals
 carries a Wirbel, with a "5" and a slur to the fifth stroke.
 A **Fünferruf ohne Schlepp** (no Vorschlag on the first stroke) also exists; deferred.
+
+**Dreierruf**:
+Three strokes: two in one Hand, then the Landung in the other — rechts, rechts, links or the
+mirror. Often written without a Hals of its own: a small mark of two stacked Notenköpfe over
+three short slashes, standing before its Landung. Its two strokes take no room in the Takt;
+they divide the gap between the Schlag before them and the Landung into three equal parts.
+Played **abgesetzt**, marked by a slur over the two small Notenköpfe, they come faster and
+closer to the Landung. A Dreierruf is never written with a Hals and Wirbel of its own.
+
+**Nachschlag**:
+A Dupfe that follows a Ruf's Landung as part of the figure, so a Ruf "mit Nachschlag" counts
+one stroke more than the Ruf: a Dreierruf mit Nachschlag is the traditional Viererruf, a
+Siebnerruf mit Nachschlag the traditional Achterruf.
+_Avoid_: Viererruf, Achterruf.
+
+**Tagwachtstreich**:
+A Dreierruf mit Nachschlag followed by a Dreierruf in the other Hand — rechts, rechts, links,
+rechts, then links, links, rechts. Exists starting on either Hand.
+
+**Tole**:
+A number of Schläge of a written value played in the time of a different number — the
+**Quintole** (five Sechzehntel in the time of four), the Triole (three in the time of two),
+the Sechstole and Siebentole. Its Schläge keep the values they would have without it and are
+played proportionally faster or slower. Written as its number under the Balken of the
+Schläge it covers, or under a single Notenkopf.
+
+**Quintole**:
+Five Sechzehntel played in the time of four — one Zählzeit in 2/4. The first Tole the
+repertoire forces; see **Tole**.
+_Avoid_: Fünferruf (a Ruf is marked by its Wirbel, a Quintole by the number under the Balken).
 
 **Pause**:
 Notated silence — a value and a position in its Takt, like a Schlag but with no Figur and no
