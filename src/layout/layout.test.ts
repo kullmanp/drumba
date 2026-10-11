@@ -4,6 +4,8 @@ import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Tole, Vers } from "../mo
 import type { Glyph, GlyphTyp } from "./layout";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { layout, UnzeichenbarePauseError } from "./layout";
+import type { Starttakt } from "../model/starttakt";
+import { UnbekannterStarttaktError } from "../model/starttakt";
 
 // --- Halterungen -----------------------------------------------------------
 
@@ -1427,5 +1429,112 @@ describe("Dreierruf", () => {
     const [zeichen] = glyphen(m, "gerollteDupfe");
 
     expect(zeichen!.x).toBeCloseTo((auftakt!.x + strich!.x) / 2, 10);
+  });
+});
+
+describe("Starttakt", () => {
+  const ab = (versIndex: number, taktIndex: number): Starttakt => ({ versIndex, taktIndex });
+  /** Ein Vers mit Auftakt und drei Takten, dann einer mit zwei. */
+  const zweiVerse = marsch(
+    "Zwei Verse",
+    mitAuftakt(
+      [2, 4],
+      2,
+      { schlaege: [schlag("Dupfe", "links", [3, 8], [1, 8])] },
+      dupfenTakt(2, [1, 4]),
+      dupfenTakt(2, [1, 4]),
+      {
+        schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
+        pausen: [pause([1, 4], [1, 4])],
+      },
+    ),
+    vers([2, 4], 1, dupfenTakt(2, [1, 4]), dupfenTakt(2, [1, 4])),
+  );
+
+  const flaechen = (m: Marsch) => glyphen(m, "taktflaeche");
+  const markierungen = (m: Marsch, starttakt?: Starttakt) =>
+    layout(m, starttakt).glyphen.filter((g) => g.typ === "starttakt");
+
+  it("gibt jedem Takt genau eine Flaeche, mit seinem Vers und Takt", () => {
+    expect(flaechen(zweiVerse).map((f) => [f.versIndex, f.taktIndex])).toEqual([
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [1, 0],
+      [1, 1],
+    ]);
+  });
+
+  it("spannt jede Flaeche von Taktstrich zu Taktstrich", () => {
+    const striche = glyphen(zweiVerse, "taktstrich").map((s) => s.x);
+    const kanten = flaechen(zweiVerse).flatMap((f) => [f.x1, f.x2]);
+
+    for (const kante of kanten) expect(striche).toContain(kante);
+  });
+
+  it("laesst benachbarte Flaechen am gemeinsamen Taktstrich aneinanderstossen", () => {
+    const ersterVers = flaechen(zweiVerse).filter((f) => f.versIndex === 0);
+
+    ersterVers.slice(1).forEach((f, i) => expect(f.x1).toBe(ersterVers[i]!.x2));
+  });
+
+  it("gibt dem Auftakt keine Flaeche: Takt 1 beginnt am ersten Taktstrich", () => {
+    const ersterStrich = glyphen(zweiVerse, "taktstrich")[0]!;
+    const auftaktKopf = glyphen(zweiVerse, "notenkopf")[0]!;
+    const ersteFlaeche = flaechen(zweiVerse)[0]!;
+
+    expect(ersteFlaeche.x1).toBe(ersterStrich.x);
+    expect(auftaktKopf.x).toBeLessThan(ersteFlaeche.x1);
+  });
+
+  it("deckt mit der Flaeche alle Noten ihres Taktes, von oben bis unten", () => {
+    const m = marsch("Ein Takt", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
+    const [flaeche] = flaechen(m);
+    const koepfe = glyphen(m, "notenkopf");
+    const balken = glyphen(m, "balken");
+
+    for (const kopf of koepfe) expect(kopf.y).toBeGreaterThan(flaeche!.yOben);
+    for (const b of balken) expect(b.y).toBeLessThan(flaeche!.yUnten);
+  });
+
+  it("legt die Flaechen der Verse uebereinander, ohne Ueberlappung", () => {
+    const [oben] = flaechen(zweiVerse).filter((f) => f.versIndex === 0);
+    const [unten] = flaechen(zweiVerse).filter((f) => f.versIndex === 1);
+
+    expect(unten!.yOben).toBeGreaterThanOrEqual(oben!.yUnten);
+  });
+
+  it("markiert den Starttakt genau ueber seiner Flaeche", () => {
+    const starttakt = ab(1, 1);
+    const alle = layout(zweiVerse, starttakt).glyphen;
+    const flaeche = alle.find(
+      (g) => g.typ === "taktflaeche" && g.versIndex === 1 && g.taktIndex === 1,
+    ) as GlyphVom<"taktflaeche">;
+    const [markierung, ...weitere] = markierungen(zweiVerse, starttakt);
+
+    expect(weitere).toEqual([]);
+    expect(markierung).toEqual({
+      typ: "starttakt",
+      x1: flaeche.x1,
+      x2: flaeche.x2,
+      yOben: flaeche.yOben,
+      yUnten: flaeche.yUnten,
+    });
+  });
+
+  it("legt die Markierung vor alle Tinte ihres Verses, damit sie nichts verdeckt", () => {
+    const alle = layout(zweiVerse, ab(1, 0)).glyphen;
+    const markierung = alle.findIndex((g) => g.typ === "starttakt");
+    const linieDesVerses = alle.filter((g) => g.typ === "notenlinie")[1]!;
+
+    expect(markierung).toBeLessThan(alle.indexOf(linieDesVerses));
+  });
+
+  it("zeichnet ohne Starttakt keine Markierung", () => {
+    expect(markierungen(zweiVerse)).toEqual([]);
+  });
+
+  it("verwirft einen Starttakt, den es im Marsch nicht gibt", () => {
+    expect(() => layout(zweiVerse, ab(1, 2))).toThrow(UnbekannterStarttaktError);
   });
 });

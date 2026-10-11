@@ -1,6 +1,8 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, dividiere, subtrahiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Pause, Schlag, Takt, Taktart, Vers } from "../model/marsch";
+import type { Starttakt } from "../model/starttakt";
+import { pruefeStarttakt } from "../model/starttakt";
 import {
   andereHand,
   AUFTAKT,
@@ -305,6 +307,32 @@ export type Glyph =
       readonly x2: number;
       readonly y: number;
       readonly ebene: number;
+    }
+  | {
+      /**
+       * Die Flaeche eines Taktes, von Taktstrich zu Taktstrich und ueber die
+       * ganze Hoehe seines Verses: wo ein Klick den Takt waehlt. Der Auftakt hat
+       * keine — wer ab Takt 1 spielt, hoert ihn ohnehin zuerst.
+       */
+      readonly typ: "taktflaeche";
+      readonly x1: number;
+      readonly x2: number;
+      readonly yOben: number;
+      readonly yUnten: number;
+      /** Ab 0 gezaehlt, wie im Starttakt. */
+      readonly versIndex: number;
+      readonly taktIndex: number;
+    }
+  | {
+      /**
+       * Die Markierung des Starttakts, ueber der Flaeche seines Taktes. Sie steht
+       * vor den Noten ihres Verses in der Liste, damit sie keine Tinte verdeckt.
+       */
+      readonly typ: "starttakt";
+      readonly x1: number;
+      readonly x2: number;
+      readonly yOben: number;
+      readonly yUnten: number;
     }
   | { readonly typ: "versNummer"; readonly x: number; readonly y: number; readonly nummer: number }
   | {
@@ -764,11 +792,42 @@ const auftaktBreite = (vers: Vers): number =>
         EINHEITEN_PRO_GANZE
     : 0;
 
-const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]): number => {
+/**
+ * Setzt einen Vers. `starttaktIndex` ist der Index des Starttakts, wenn er in
+ * diesem Vers liegt.
+ */
+const legeVers = (
+  vers: Vers,
+  versIndex: number,
+  linieY: number,
+  starttaktIndex: number | undefined,
+  glyphen: Glyph[],
+): number => {
+  const nummer = versIndex + 1;
   // Die Notenlinie beginnt am Auftakt; der erste Taktstrich steht nach ihm.
   const linieX = RAND + VERS_KOPF_BREITE;
   const inhaltX = linieX + auftaktBreite(vers);
   const breite = vers.takte.length * taktBreite(vers.taktart);
+  const flaechen = vers.takte.map((_, taktIndex): Extract<Glyph, { typ: "taktflaeche" }> => {
+    const x1 = inhaltX + taktIndex * taktBreite(vers.taktart);
+    const yOben = linieY - NOTENLINIE_ABSTAND;
+    return {
+      typ: "taktflaeche",
+      x1,
+      x2: x1 + taktBreite(vers.taktart),
+      yOben,
+      yUnten: yOben + VERS_HOEHE,
+      versIndex,
+      taktIndex,
+    };
+  });
+
+  // Die Markierung zuerst, damit alle Tinte des Verses ueber ihr liegt.
+  const markiert = starttaktIndex === undefined ? undefined : flaechen[starttaktIndex];
+  if (markiert) {
+    const { x1, x2, yOben, yUnten } = markiert;
+    glyphen.push({ typ: "starttakt", x1, x2, yOben, yUnten });
+  }
 
   glyphen.push({ typ: "versNummer", x: RAND, y: linieY, nummer });
   glyphen.push({
@@ -823,13 +882,17 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     linieY,
     glyphen,
   );
+  // Die Flaechen zuletzt: sie fangen den Klick und liegen darum ueber allem.
+  glyphen.push(...flaechen);
 
   return inhaltX + breite;
 };
 
-export const layout = (marsch: Marsch): Layout => {
+/** Ein Marsch als platzierte Glyphen, mit dem `starttakt` markiert, falls es einen gibt. */
+export const layout = (marsch: Marsch, starttakt?: Starttakt): Layout => {
   // Ein ueberlaufender Takt oder ein Ruf ohne Landung wird nicht still gezeichnet.
   pruefeMarsch(marsch);
+  if (starttakt) pruefeStarttakt(marsch, starttakt);
 
   const glyphen: Glyph[] = [];
   glyphen.push({ typ: "titel", x: RAND, y: RAND + TITEL_HOEHE / 2, text: marsch.titel });
@@ -837,7 +900,8 @@ export const layout = (marsch: Marsch): Layout => {
   let breite = 0;
   marsch.verse.forEach((vers, versIndex) => {
     const linieY = RAND + TITEL_HOEHE + versIndex * VERS_HOEHE + NOTENLINIE_ABSTAND;
-    breite = Math.max(breite, legeVers(vers, versIndex + 1, linieY, glyphen));
+    const starttaktIndex = starttakt?.versIndex === versIndex ? starttakt.taktIndex : undefined;
+    breite = Math.max(breite, legeVers(vers, versIndex, linieY, starttaktIndex, glyphen));
   });
 
   return {

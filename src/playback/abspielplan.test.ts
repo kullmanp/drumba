@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Tole, Vers } from "../model/marsch";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
+import type { Starttakt } from "../model/starttakt";
+import { UnbekannterStarttaktError } from "../model/starttakt";
 import { abspielplan, VORSCHLAG_VORLAUF } from "./abspielplan";
 
 // --- Halterungen -----------------------------------------------------------
@@ -557,5 +559,135 @@ describe("Auftakt", () => {
   it("spielt einen Vers ohne Auftakt wie bisher", () => {
     const m = marsch(vers([2, 4], 2, dupfenTakt(2, [1, 4])));
     expect(zeiten(m, 60)).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe("Starttakt", () => {
+  const ab = (versIndex: number, taktIndex: number): Starttakt => ({ versIndex, taktIndex });
+
+  /** Die Zeiten ab einem Starttakt, bei Tempo 60. */
+  const zeitenAb = (m: Marsch, starttakt: Starttakt): number[] =>
+    abspielplan(m, 60, starttakt).map((a) => a.zeit);
+
+  /** Viertel und Viertelpause: das Ende, ueber das ein Auftakt wiederkehrt. */
+  const schluss: Taktentwurf = {
+    schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
+    pausen: [pause([1, 4], [1, 4])],
+  };
+
+  /** Ein 2/4-Takt: der Schlag `figur` auf der zweiten Viertel, eine Viertel Dupfe davor. */
+  const mitFigur = (figur: Figur): Taktentwurf => ({
+    schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4]), schlag(figur, "links", [1, 4], [1, 4])],
+  });
+
+  /** Ein 2/4-Takt, der mit `figur` links auf der ersten Viertel beginnt. */
+  const beginntMit = (figur: Figur): Taktentwurf => ({
+    schlaege: [schlag(figur, "links", [0, 1], [1, 4]), schlag("Dupfe", "rechts", [1, 4], [1, 4])],
+  });
+
+  // Drei Takte zu je 2 s bei Tempo 60, dann ein zweiter Vers.
+  const dreiTakte = marsch(
+    vers([2, 4], 1, dupfenTakt(2, [1, 4]), dupfenTakt(4, [1, 8]), dupfenTakt(2, [1, 4])),
+    vers([2, 4], 1, dupfenTakt(2, [1, 4])),
+  );
+
+  it("spielt ohne Starttakt den ganzen Marsch wie bisher", () => {
+    expect(abspielplan(dreiTakte, 60, undefined)).toEqual(abspielplan(dreiTakte, 60));
+  });
+
+  it("beginnt mit dem ersten Schlag des Starttakts auf der Zeit 0", () => {
+    const [erster] = abspielplan(dreiTakte, 60, ab(0, 1));
+
+    expect(erster).toEqual({ zeit: 0, hand: "rechts", lautstaerke: 1 });
+  });
+
+  it("spielt ab dem Starttakt das Ende des ganzen Plans, um dessen Beginn verschoben", () => {
+    // Takt 2 beginnt bei Tempo 60 nach 2 s; vor ihm stehen zwei Schlaege.
+    const ganz = abspielplan(dreiTakte, 60);
+    const ab2 = abspielplan(dreiTakte, 60, ab(0, 1));
+
+    expect(ab2).toEqual(ganz.slice(2).map((a) => ({ ...a, zeit: a.zeit - 2 })));
+  });
+
+  it("beginnt im ersten Durchgang und spielt danach die Wiederholung ganz", () => {
+    // Takt 1 mit zwei Vierteln, Takt 2 mit einer Halben; je 2 s bei Tempo 60.
+    const m = marsch(vers([2, 4], 2, dupfenTakt(2, [1, 4]), dupfenTakt(1, [2, 4])));
+
+    expect(zeitenAb(m, ab(0, 1))).toEqual([0, 2, 3, 4]);
+  });
+
+  it("spielt ab Takt 1 eines Verses mit Auftakt zuerst den Auftakt", () => {
+    // Vers 2 hat einen Auftakt von einer Achtel, 0.5 s, ueber die Pause am Ende von Vers 1.
+    const m = marsch(vers([2, 4], 1, dupfenTakt(2, [1, 4]), schluss), {
+      ...vers([2, 4], 1, dupfenTakt(2, [1, 4])),
+      auftakt: { schlaege: [schlag("Dupfe", "links", [3, 8], [1, 8])], pausen: [], tolen: [] },
+    });
+    const plan = abspielplan(m, 60, ab(1, 0));
+
+    expect(plan.map((a) => [a.zeit, a.hand])).toEqual([
+      [0, "links"],
+      [0.5, "rechts"],
+      [1.5, "links"],
+    ]);
+  });
+
+  it("behaelt die leise Dupfe eines Doubles auf dem ersten Schlag, vor der Zeit 0", () => {
+    const m = marsch(vers([2, 4], 1, mitFigur("Dupfe"), beginntMit("Double")));
+    const [leiseDupfe, vorschlag, hauptschlag] = abspielplan(m, 60, ab(0, 1));
+
+    expect(leiseDupfe!.zeit).toBeLessThan(0);
+    expect(leiseDupfe!.hand).toBe("links");
+    expect(vorschlag!.zeit).toBeLessThan(0);
+    expect(hauptschlag).toEqual({ zeit: 0, hand: "links", lautstaerke: 1 });
+  });
+
+  it("behaelt die gerollten Dupfe eines Dreierrufs auf dem ersten Schlag, wie im ganzen Plan", () => {
+    // Takt 2 beginnt bei Tempo 60 nach 2 s.
+    const m = marsch(vers([2, 4], 1, mitFigur("Dupfe"), beginntMit("Dreierruf")));
+    const ganz = abspielplan(m, 60).slice(2);
+    const ab2 = abspielplan(m, 60, ab(0, 1));
+
+    expect(ab2).toHaveLength(ganz.length);
+    ab2.forEach((a, i) => expect(a.zeit).toBeCloseTo(ganz[i]!.zeit - 2, 10));
+    expect(ab2.filter((a) => a.zeit < 0)).toHaveLength(2);
+  });
+
+  it("laesst einen Fuenferruf vor dem Starttakt weg und spielt seine Landung allein", () => {
+    // Takt 1 endet mit einem Fuenferruf rechts auf der letzten Achtel; er landet auf Takt 2.
+    const m = marsch(
+      vers(
+        [2, 4],
+        1,
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+            schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+          ],
+        },
+        dupfenTakt(2, [1, 4]),
+      ),
+    );
+
+    expect(abspielplan(m, 60, ab(0, 1))).toEqual([
+      { zeit: 0, hand: "rechts", lautstaerke: 1 },
+      { zeit: 1, hand: "links", lautstaerke: 1 },
+    ]);
+  });
+
+  it("behaelt eine Pause am Beginn des Starttakts: der erste Schlag kommt nach der Zeit 0", () => {
+    // Eine Viertelpause, dann eine Viertel: bei Tempo 60 nach 1 s.
+    const m = marsch(
+      vers([2, 4], 1, dupfenTakt(2, [1, 4]), {
+        schlaege: [schlag("Dupfe", "links", [1, 4], [1, 4])],
+        pausen: [pause([0, 1], [1, 4])],
+      }),
+    );
+
+    expect(zeitenAb(m, ab(0, 1))).toEqual([1]);
+  });
+
+  it("verwirft einen Starttakt, den es im Marsch nicht gibt", () => {
+    expect(() => abspielplan(dreiTakte, 60, ab(0, 3))).toThrow(UnbekannterStarttaktError);
+    expect(() => abspielplan(dreiTakte, 60, ab(2, 0))).toThrow(/Vers 3, Takt 1/);
   });
 });

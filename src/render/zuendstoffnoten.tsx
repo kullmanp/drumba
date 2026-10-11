@@ -1,6 +1,7 @@
 import type { Glyph } from "../layout/layout";
 import { layout } from "../layout/layout";
 import type { Marsch } from "../model/marsch";
+import type { Starttakt } from "../model/starttakt";
 
 /**
  * Der SVG-Renderer: eine stumpfe Abbildung platzierter Glyphen auf
@@ -101,6 +102,10 @@ const BOGEN_STAERKE = 0.6;
 const RUF_ZAHL_GROESSE = 8;
 /** Die Zahl einer Tole, etwas kleiner als die eines Rufs und aufrecht, wie in ZicZac. */
 const TOLE_ZAHL_GROESSE = 7;
+
+/** Die Markierung des Starttakts: ein blasser, warmer Hintergrund, der keine Tinte verdeckt. */
+const STARTTAKT_FARBE = "#e0a030";
+const STARTTAKT_DECKKRAFT = 0.18;
 
 /**
  * Die Halbachsen der Ellipse, die eine gegebene Huellbox unter `KOPF_NEIGUNG`
@@ -245,8 +250,39 @@ const Taktstrich = ({ glyph }: { glyph: Extract<Glyph, { typ: "taktstrich" }> })
   </>
 );
 
-const zeichne = (glyph: Glyph) => {
+const zeichne = (glyph: Glyph, waehleTakt?: (starttakt: Starttakt) => void) => {
   switch (glyph.typ) {
+    case "starttakt":
+      return (
+        <rect
+          x={glyph.x1}
+          y={glyph.yOben}
+          width={glyph.x2 - glyph.x1}
+          height={glyph.yUnten - glyph.yOben}
+          fill={STARTTAKT_FARBE}
+          fillOpacity={STARTTAKT_DECKKRAFT}
+          stroke="none"
+        />
+      );
+    case "taktflaeche": {
+      const { versIndex, taktIndex } = glyph;
+      // Durchsichtig, aber klickbar: `pointerEvents` faengt den Klick auch ohne Farbe.
+      return (
+        <rect
+          x={glyph.x1}
+          y={glyph.yOben}
+          width={glyph.x2 - glyph.x1}
+          height={glyph.yUnten - glyph.yOben}
+          fill="none"
+          stroke="none"
+          pointerEvents={waehleTakt ? "all" : "none"}
+          cursor={waehleTakt ? "pointer" : undefined}
+          onClick={waehleTakt && (() => waehleTakt({ versIndex, taktIndex }))}
+        >
+          <title>{`Vers ${versIndex + 1}, Takt ${taktIndex + 1}`}</title>
+        </rect>
+      );
+    }
     case "titel":
       return (
         <text x={glyph.x} y={glyph.y} fontSize={22} fontWeight={600} fill="currentColor">
@@ -398,10 +434,19 @@ export interface ZuendstoffnotenProps {
   readonly marsch: Marsch;
   /** Abstrakte Einheiten je Bildschirmpunkt. */
   readonly skalierung?: number;
+  /** Der markierte Takt, ab dem gespielt wird. */
+  readonly starttakt?: Starttakt | undefined;
+  /** Wird mit Vers und Takt gerufen, wenn ein Takt angeklickt wird. */
+  readonly waehleTakt?: (starttakt: Starttakt) => void;
 }
 
-export const Zuendstoffnoten = ({ marsch, skalierung = 1.6 }: ZuendstoffnotenProps) => {
-  const { breite, hoehe, glyphen } = layout(marsch);
+export const Zuendstoffnoten = ({
+  marsch,
+  skalierung = 1.6,
+  starttakt,
+  waehleTakt,
+}: ZuendstoffnotenProps) => {
+  const { breite, hoehe, glyphen } = layout(marsch, starttakt);
 
   return (
     <svg
@@ -414,7 +459,7 @@ export const Zuendstoffnoten = ({ marsch, skalierung = 1.6 }: ZuendstoffnotenPro
       strokeLinecap="round"
     >
       {glyphen.map((glyph, i) => (
-        <g key={i}>{zeichne(glyph)}</g>
+        <g key={i}>{zeichne(glyph, waehleTakt)}</g>
       ))}
     </svg>
   );
