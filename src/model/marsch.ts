@@ -82,6 +82,28 @@ export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | undefined 
 };
 
 /**
+ * Ein Takt, dessen Schläge nicht in seine Taktart passen. Solche Daten werden
+ * weder gezeichnet noch gespielt — falsch gesetzte Schläge sollen auffallen,
+ * nicht still über den Taktstrich hinauslaufen.
+ */
+export class UngültigerTaktError extends Error {
+  constructor(
+    readonly versNummer: number,
+    readonly taktNummer: number,
+    readonly schlag: Schlag,
+    taktart: Taktart,
+  ) {
+    super(
+      `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} auf ` +
+        `${schlag.position.zaehler}/${schlag.position.nenner} mit Wert ` +
+        `${schlag.wert.zaehler}/${schlag.wert.nenner} passt nicht in ` +
+        `${taktart.zaehler}/${taktart.nenner}`,
+    );
+    this.name = "UngültigerTaktError";
+  }
+}
+
+/**
  * Ob die Taktart zusammengesetzt ist — 6/8 und 9/8 zählen in punktierten
  * Vierteln, 2/4 und 3/8 nicht.
  */

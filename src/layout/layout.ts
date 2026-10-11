@@ -1,7 +1,7 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, vergleiche } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
-import { taktLaenge, taktUeberlauf, zaehlzeit } from "../model/marsch";
+import { taktLaenge, taktUeberlauf, UngültigerTaktError, zaehlzeit } from "../model/marsch";
 
 /**
  * Das Zündstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
@@ -177,28 +177,6 @@ export type Glyph =
       readonly zaehler: number;
       readonly nenner: number;
     };
-
-/**
- * Ein Takt, dessen Schläge nicht in seine Taktart passen. Solche Daten werden
- * nicht gezeichnet — falsch gesetzte Schläge sollen auffallen, nicht still
- * über den Taktstrich hinauslaufen.
- */
-export class UngültigerTaktError extends Error {
-  constructor(
-    readonly versNummer: number,
-    readonly taktNummer: number,
-    readonly schlag: Schlag,
-    taktart: Taktart,
-  ) {
-    super(
-      `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} auf ` +
-        `${schlag.position.zaehler}/${schlag.position.nenner} mit Wert ` +
-        `${schlag.wert.zaehler}/${schlag.wert.nenner} passt nicht in ` +
-        `${taktart.zaehler}/${taktart.nenner}`,
-    );
-    this.name = "UngültigerTaktError";
-  }
-}
 
 /**
  * Eine Balkengruppe aus ungleich langen Schlägen. Eine punktierte Achtel neben

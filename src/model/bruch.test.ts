@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addiere, alsZahl, bruch, vergleiche } from "./bruch";
+import { addiere, alsZahl, bruch, dividiere, vergleiche } from "./bruch";
 
 describe("bruch", () => {
   it("kürzt auf kleinste Form", () => {
@@ -24,6 +24,14 @@ describe("bruch", () => {
 });
 
 describe("Arithmetik", () => {
+  it("dividiert exakt: ein 6/8-Takt misst zwei punktierte Viertel", () => {
+    expect(dividiere(bruch(3, 4), bruch(3, 8))).toEqual({ zaehler: 2, nenner: 1 });
+  });
+
+  it("dividiert mit negativem Ergebnis", () => {
+    expect(dividiere(bruch(-1, 8), bruch(1, 4))).toEqual({ zaehler: -1, nenner: 2 });
+  });
+
   it("addiert über verschiedene Nenner exakt", () => {
     // Ein 6/8-Takt: fünf Achtel plus ein Sechzehntel = 11/16.
     expect(addiere(bruch(5, 8), bruch(1, 16))).toEqual({ zaehler: 11, nenner: 16 });

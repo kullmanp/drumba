@@ -36,6 +36,9 @@ export const NULL: Bruch = bruch(0, 1);
 export const addiere = (a: Bruch, b: Bruch): Bruch =>
   bruch(a.zaehler * b.nenner + b.zaehler * a.nenner, a.nenner * b.nenner);
 
+export const dividiere = (a: Bruch, b: Bruch): Bruch =>
+  bruch(a.zaehler * b.nenner, a.nenner * b.zaehler);
+
 /** -1, 0 oder 1 — die Ordnung auf Brüchen. */
 export const vergleiche = (a: Bruch, b: Bruch): -1 | 0 | 1 => {
   const links = a.zaehler * b.nenner;

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
-import { layout, UngleicheBalkengruppeError, UngültigerTaktError } from "./layout";
+import { UngültigerTaktError } from "../model/marsch";
+import { layout, UngleicheBalkengruppeError } from "./layout";
 
 // --- Halterungen -----------------------------------------------------------
 

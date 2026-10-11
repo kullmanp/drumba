@@ -9,15 +9,19 @@ TypeScript + React + Vite, notation as inline SVG, no backend, Vitest.
 
 `npm run dev` opens the score, `npm test` runs Vitest, `npm run typecheck` runs `tsc`.
 
-Three modules, in dependency order — each layer knows nothing of the one above it:
+Four modules, in dependency order — each layer knows nothing of the one above it:
 
 - `src/model/` — the canonical model (ADR-0001) and exact fraction arithmetic. No geometry.
 - `src/layout/` — `layout(marsch)`, a pure function to placed glyphs in abstract units.
   No React, no SVG. **This is the tested seam**: tests assert on the returned data, and on
   relationships between glyphs rather than on the constants chosen for looks.
 - `src/render/` — React components mapping glyphs to SVG. Untested; verified by eye.
+- `src/playback/` — a sibling of the layout over the same model, never reading layout or SVG.
+  `abspielplan(marsch, tempo)` is the pure, tested timing seam: a time-ordered list of
+  `Anschlag`. `wiedergabe.ts` is the Web Audio adapter that only schedules that list.
+  Untested; verified by ear.
 
-The line between those two: **the layout decides where every mark sits; the renderer decides
+The line between layout and renderer: **the layout decides where every mark sits; the renderer decides
 how thick and how tall it is.** Anything positioned along the score — a Vorschlag's offset, a
 Wirbel's span, the second stroke and the dots of a repeat Taktstrich — is emitted by the
 layout as coordinates, so it can be asserted on. What is left to the renderer is stroke weight
