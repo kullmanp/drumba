@@ -1099,7 +1099,7 @@ describe("Fuenferruf", () => {
     expect(bogen!.x2).toBeGreaterThan(zwischen.x);
   });
 
-  it("schreibt die 5 ueber den Bogen, zwischen seine Enden", () => {
+  it("schreibt die 5 unter den Bogen, zwischen seine Enden", () => {
     const [zahl, ...weitere] = glyphen(imTakt, "rufZahl");
     const [bogen] = glyphen(imTakt, "bogen");
 
@@ -1107,7 +1107,7 @@ describe("Fuenferruf", () => {
     expect(zahl!.text).toBe("5");
     expect(zahl!.x).toBeGreaterThan(bogen!.x1);
     expect(zahl!.x).toBeLessThan(bogen!.x2);
-    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
+    expect(zahl!.y).toBeGreaterThan(bogen!.scheitelY);
   });
 
   describe("der auf eine Zaehlzeit fuehrt", () => {
@@ -1254,7 +1254,7 @@ describe("Siebnerruf", () => {
     expect(bogen!.scheitelY).toBeLessThan(Math.min(bogen!.y1, bogen!.y2));
   });
 
-  it("schreibt die 7 ueber den Bogen", () => {
+  it("schreibt die 7 unter den Bogen", () => {
     const [zahl, ...weitere] = glyphen(zicZac, "rufZahl");
     const [bogen] = glyphen(zicZac, "bogen");
 
@@ -1262,7 +1262,7 @@ describe("Siebnerruf", () => {
     expect(zahl!.text).toBe("7");
     expect(zahl!.x).toBeGreaterThan(bogen!.x1);
     expect(zahl!.x).toBeLessThan(bogen!.x2);
-    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
+    expect(zahl!.y).toBeGreaterThan(bogen!.scheitelY);
   });
 });
 
@@ -1324,7 +1324,7 @@ describe("Fuenferruf ohne Schlepp", () => {
     ).toEqual([1]);
   });
 
-  it("schlaegt den Bogen ueber der Linie zur Landung und schreibt die 5 darueber", () => {
+  it("schlaegt den Bogen ueber der Linie zur Landung und schreibt die 5 darunter", () => {
     const landung = glyphen(zicZac, "notenkopf")[2]!;
     const [bogen, ...weitere] = glyphen(zicZac, "bogen");
     const [zahl] = glyphen(zicZac, "rufZahl");
@@ -1334,7 +1334,40 @@ describe("Fuenferruf ohne Schlepp", () => {
     // Die Landung liegt links, unter der Linie; der Bogen endet trotzdem ueber ihr.
     expect(bogen!.y2).toBeLessThan(glyphen(zicZac, "notenlinie")[0]!.y);
     expect(zahl!.text).toBe("5");
-    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
+    expect(zahl!.y).toBeGreaterThan(bogen!.scheitelY);
+  });
+});
+
+describe("Hals eines freien Rufs", () => {
+  /** Zwei freie Fuenferrufe auf der letzten Achtel, einer rechts, einer links. */
+  const freierRuf = (hand: Hand) =>
+    marsch(
+      "Freier Ruf",
+      vers(
+        [2, 4],
+        1,
+        {
+          schlaege: [
+            schlag("Dupfe", hand, [0, 1], [1, 4]),
+            schlag("Dupfe", hand, [1, 4], [1, 8]),
+            schlag("Fuenferruf", hand, [3, 8], [1, 8]),
+          ],
+        },
+        { schlaege: [schlag("Dupfe", hand, [0, 1], [2, 4])] },
+      ),
+    );
+  const hals = (hand: Hand) => glyphen(freierRuf(hand), "hals")[2]!;
+
+  it("ist vom Kopf aus gleich lang, ob der Kopf rechts oder links steht", () => {
+    const rechts = hals("rechts");
+    const links = hals("links");
+    expect(links.yUnten - links.yOben).toBeCloseTo(rechts.yUnten - rechts.yOben, 10);
+    expect(links.yUnten).toBeGreaterThan(rechts.yUnten);
+  });
+
+  it("endet ueber den Balken", () => {
+    const voller = glyphen(freierRuf("links"), "hals")[0]!;
+    expect(hals("links").yUnten).toBeLessThan(voller.yUnten);
   });
 });
 

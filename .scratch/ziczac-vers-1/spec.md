@@ -152,3 +152,8 @@ Loose ends:
   time.
 - The hooks' size (`TOLE_ZAHL_HALBBREITE`, `TOLE_ZAHL_HALBHOEHE`) assumes the number's size,
   which the renderer sets.
+
+**2026-10-11, your check.** Looks and sounds right. Two fixes since: every Ruf's number now
+stands under its Bogen, not above it; a free Ruf's Hals is now a fixed length from its head
+(about two thirds of a full Hals), so under a links head it reaches nearly to the Balken, as in
+ZicZac Vers 1, Takte 4 and 7.

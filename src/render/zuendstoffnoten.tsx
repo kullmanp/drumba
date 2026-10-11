@@ -366,6 +366,7 @@ const zeichne = (glyph: Glyph, waehleTakt?: (starttakt: Starttakt) => void) => {
       );
     }
     case "rufZahl":
+      // Das Layout nennt die Oberkante: die Zahl haengt unter dem Bogen.
       return (
         <text
           x={glyph.x}
@@ -373,6 +374,7 @@ const zeichne = (glyph: Glyph, waehleTakt?: (starttakt: Starttakt) => void) => {
           fontSize={RUF_ZAHL_GROESSE}
           fontStyle="italic"
           textAnchor="middle"
+          dominantBaseline="hanging"
           fill="currentColor"
           stroke="none"
         >

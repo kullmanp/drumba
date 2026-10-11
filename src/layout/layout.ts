@@ -121,7 +121,10 @@ const BOGEN_HOEHE = 8;
  * Linie, wenn die Landung links liegt (ZicZac, Vers 3, Takt 7).
  */
 const BOGEN_UEBER_LINIE = 3;
-/** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
+/**
+ * Luft zwischen dem Scheitel des Bogens und der Oberkante der Ruf-Zahl: sie
+ * steht unter dem Bogen, nicht darueber, wie in ZicZac.
+ */
 const ZAHL_LUFT = 2;
 /**
  * Luft zwischen dem untersten Balken und der Oberkante der Zahl einer Tole.
@@ -156,11 +159,13 @@ const WIRBEL_STRICHE = 2;
  * Ein Ruf, der nicht auf einer Zaehlzeit beginnt, fuehrt auf eine hin und steht
  * darum frei vor ihr: ungebalkt und kleiner, wie ein Vorschlag. Am Original
  * (ZicZac) ausgemessen: der Kopf rund zwei Drittel so gross, naeher an der
- * Linie, der Hals etwa halb so tief.
+ * Linie. Sein Hals ist vom Kopf aus gemessen gleich lang, auf welcher Seite der
+ * Linie der Kopf auch steht — etwa zwei Drittel eines vollen Halses —, und
+ * reicht darum unter einem Kopf links tiefer, fast bis an die Balken.
  */
 const FREIER_RUF_KOPF = 0.65;
 const FREIER_RUF_KOPF_ABSTAND = 0.6 * KOPF_ABSTAND;
-const FREIER_RUF_HALS_TIEFE = 0.45 * HALS_TIEFE;
+const FREIER_RUF_HALS_LAENGE = 0.63 * HALS_TIEFE;
 
 /**
  * Das Zeichen gerollter Dupfe steht auf der Seite der Linie, die seine Hand
@@ -271,9 +276,9 @@ export type Glyph =
     }
   | {
       readonly typ: "rufZahl";
-      /** Die Mitte der Zahl, ueber dem Bogen. */
+      /** Die Mitte der Zahl, unter dem Bogen. */
       readonly x: number;
-      /** Die Grundlinie der Zahl. */
+      /** Die Oberkante der Zahl, knapp unter dem Scheitel des Bogens. */
       readonly y: number;
       readonly text: string;
     }
@@ -666,14 +671,15 @@ const legeTakt = (
     const x = inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE;
     const frei = istFreierRuf(schlag, versTaktart);
     const kopf = frei ? FREIER_RUF_KOPF : 1;
+    const kopfY = kopfHoehe(schlag.hand, linieY, frei ? FREIER_RUF_KOPF_ABSTAND : KOPF_ABSTAND);
     return {
       schlag,
       x,
       halsX: x - HALS_VERSATZ * kopf,
-      kopfY: kopfHoehe(schlag.hand, linieY, frei ? FREIER_RUF_KOPF_ABSTAND : KOPF_ABSTAND),
+      kopfY,
       kopfBreite: KOPF_BREITE * kopf,
       kopfHoehe: KOPF_HOEHE * kopf,
-      halsEnde: frei ? linieY + FREIER_RUF_HALS_TIEFE : balkenY,
+      halsEnde: frei ? kopfY + FREIER_RUF_HALS_LAENGE : balkenY,
       frei,
       gezeichneterWert: gezeichneterWert(takt, index, versTaktart),
     };
@@ -809,7 +815,7 @@ const legeBoegen = (
       glyphen.push({
         typ: "rufZahl",
         x: (x1 + x2) / 2,
-        y: scheitelY - ZAHL_LUFT,
+        y: scheitelY + ZAHL_LUFT,
         text: String(merkmale.schlaege),
       });
     });
