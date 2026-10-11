@@ -1,15 +1,14 @@
 # Coding standards
 
 Judgement calls for review. What a tool can check lives in `npm run check` (types, tests,
-Prettier), not here. Module boundaries are in `AGENTS.md`.
+Prettier, umlauts in code), not here. Module boundaries are in `AGENTS.md`.
 
 ## Vocabulary
 
-- **Glossary terms verbatim.** Identifiers use the `GLOSSARY.md` vocabulary as written, umlauts
-  included, in every identifier style: `zählzeit`, `schläge`, `KOPF_HÖHE`, `Fünferruf` — never
-  `zaehlzeit` or `Fuenferruf`. Swiss spelling: `ss`, not `ß`.
-- **Filenames stay ASCII** (`uebungsmarsch.ts`), to keep git and macOS from disagreeing about
-  normalisation. Import paths follow the filename; the identifier inside keeps its umlauts.
+- **Glossary terms verbatim, spelled in ASCII.** Identifiers use the `GLOSSARY.md` vocabulary,
+  with umlauts written out: `zaehlzeit`, `schlaege`, `KOPF_HOEHE`, `UngueltigerTaktError`,
+  `Fuenferruf`. Code files hold no umlauts at all — names, comments, test names and UI text alike
+  (`npm run check` enforces it). Markdown keeps its umlauts.
 - **Respect the _Avoid_ lists.** A name the glossary says to avoid is wrong even in English code
   (`stroke`, `note` for a Schlag).
 - **New terms.** A German word for a concept the tradition names goes in `GLOSSARY.md`. A word

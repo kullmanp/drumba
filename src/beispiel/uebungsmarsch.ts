@@ -3,11 +3,11 @@ import type { Figur, Hand, Marsch, Schlag, Takt } from "../model/marsch";
 import { andereHand } from "../model/marsch";
 
 /**
- * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Übertragung aus
- * dem Repertoire, sondern eine Übung, die beide Figuren dieser Iteration zeigt
- * — Dupfe und Schlepp — auf beiden Händen, in 6/8 und in 2/4.
+ * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
+ * dem Repertoire, sondern eine Uebung, die beide Figuren dieser Iteration zeigt
+ * — Dupfe und Schlepp — auf beiden Haenden, in 6/8 und in 2/4.
  *
- * Die Balkengruppen sind bewusst durchweg gleichwertig: Balkenstummel für eine
+ * Die Balkengruppen sind bewusst durchweg gleichwertig: Balkenstummel fuer eine
  * gemischte Gruppe gibt es noch nicht, und das Layout wirft, statt sie falsch
  * zu zeichnen.
  */
@@ -24,25 +24,25 @@ const schlag = (
   wert: bruch(wert[0], wert[1]),
 });
 
-/** Gleich lange Schläge ab Position 0, abwechselnd ab `beginn`. */
+/** Gleich lange Schlaege ab Position 0, abwechselnd ab `beginn`. */
 const wechselnd = (figuren: readonly Figur[], beginn: Hand, nenner: number): Takt => ({
   schlaege: figuren.map((figur, i) =>
     schlag(figur, i % 2 === 0 ? beginn : andereHand(beginn), [i, nenner], [1, nenner]),
   ),
 });
 
-export const übungsmarsch: Marsch = {
-  titel: "Übungsmarsch",
+export const uebungsmarsch: Marsch = {
+  titel: "Uebungsmarsch",
   verse: [
     {
-      taktart: { zähler: 6, nenner: 8 },
+      taktart: { zaehler: 6, nenner: 8 },
       wiederholungen: 2,
       takte: [
         // Sechs Achtel — zwei Balkengruppen zu drei.
         wechselnd(["Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe"], "rechts", 8),
-        // Schlepp auf jede Zählzeit.
+        // Schlepp auf jede Zaehlzeit.
         wechselnd(["Schlepp", "Dupfe", "Dupfe", "Schlepp", "Dupfe", "Dupfe"], "rechts", 8),
-        // Punktierte Viertel über die erste Zählzeit, dann drei Achtel.
+        // Punktierte Viertel ueber die erste Zaehlzeit, dann drei Achtel.
         {
           schlaege: [
             schlag("Schlepp", "rechts", [0, 1], [3, 8]),
@@ -61,7 +61,7 @@ export const übungsmarsch: Marsch = {
       ],
     },
     {
-      taktart: { zähler: 2, nenner: 4 },
+      taktart: { zaehler: 2, nenner: 4 },
       wiederholungen: 1,
       takte: [
         // Acht Sechzehntel — eine Balkengruppe je Viertel.

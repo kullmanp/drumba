@@ -1,27 +1,27 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, vergleiche } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
-import { taktLänge, taktÜberlauf, UngültigerTaktError, zählzeit } from "../model/marsch";
+import { taktLaenge, taktUeberlauf, UngueltigerTaktError, zaehlzeit } from "../model/marsch";
 
 /**
- * Das Zündstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
+ * Das Zuendstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
  * Sie besitzt die ganze Geometrie und kennt weder React noch SVG. Alle Masse
  * sind abstrakte Einheiten; erst der Renderer skaliert sie.
  *
  * Die Glyphen sind eine flache, von links nach rechts und von oben nach unten
  * geordnete Liste — Malreihenfolge zugleich Leserichtung.
  *
- * Die Notenlinie läuft *durch* die Notation, nicht darunter: ein Notenkopf
- * steht rechts über der Linie und links darunter, und daran liest man die
- * Hand. Deshalb gehört die Höhe eines Kopfes hierher und nicht in den
- * Renderer — sie trägt Bedeutung und muss prüfbar sein.
+ * Die Notenlinie laeuft *durch* die Notation, nicht darunter: ein Notenkopf
+ * steht rechts ueber der Linie und links darunter, und daran liest man die
+ * Hand. Deshalb gehoert die Hoehe eines Kopfes hierher und nicht in den
+ * Renderer — sie traegt Bedeutung und muss pruefbar sein.
  */
 
 /** Abstrakte Einheiten je ganzer Note — der Massstab der horizontalen Zeit. */
 const EINHEITEN_PRO_GANZE = 192;
 const RAND = 16;
-const TITEL_HÖHE = 44;
-const VERS_HÖHE = 96;
+const TITEL_HOEHE = 44;
+const VERS_HOEHE = 96;
 /** Abstand der Notenlinie von der Oberkante des Vers-Blocks. */
 const NOTENLINIE_ABSTAND = 40;
 /**
@@ -30,69 +30,69 @@ const NOTENLINIE_ABSTAND = 40;
  * Ausgemessen am `2006Trommelfont`, der Schrift, in der der Schweizerische
  * Tambouren- und Pfeiferverband seine eigenen Dokumente setzt: die Umrisse
  * seiner Notenglyphen sind die Vorlage, nicht der allgemeine Notenstich. Die
- * Zahlen dort sind auf die Kopfhöhe bezogen und hier mit einer frei gewählten
- * Kopfhöhe von 8 Einheiten wieder ausmultipliziert — die Schrift ist eine
- * Textschrift mit festen Vorschubbreiten und sagt darum nichts über den
- * waagrechten Abstand zweier Schläge; der kommt weiter aus dem Rhythmus.
+ * Zahlen dort sind auf die Kopfhoehe bezogen und hier mit einer frei gewaehlten
+ * Kopfhoehe von 8 Einheiten wieder ausmultipliziert — die Schrift ist eine
+ * Textschrift mit festen Vorschubbreiten und sagt darum nichts ueber den
+ * waagrechten Abstand zweier Schlaege; der kommt weiter aus dem Rhythmus.
  *
- * Die Grösse des Kopfes steht hier und nicht im Renderer, weil sich fremde
- * Zeichen an seinen Rändern ausrichten: der Vorschlag über seiner Oberkante,
+ * Die Groesse des Kopfes steht hier und nicht im Renderer, weil sich fremde
+ * Zeichen an seinen Raendern ausrichten: der Vorschlag ueber seiner Oberkante,
  * der Hals an seiner linken Flanke, der Punkt rechts neben ihm. Dem Renderer
- * bleibt die Form — dass diese Hüllbox eine gekippte Ellipse füllt.
+ * bleibt die Form — dass diese Huellbox eine gekippte Ellipse fuellt.
  */
-const KOPF_HÖHE = 8;
+const KOPF_HOEHE = 8;
 const KOPF_BREITE = 9.19;
 /**
- * Abstand der Kopfmitte von der Notenlinie. Der Kopf berührt die Linie nicht:
- * zwischen Linienkante und Kopfunterkante bleibt eine gute halbe Kopfhöhe
+ * Abstand der Kopfmitte von der Notenlinie. Der Kopf beruehrt die Linie nicht:
+ * zwischen Linienkante und Kopfunterkante bleibt eine gute halbe Kopfhoehe
  * Luft. Erst dieser Abstand macht die Hand auf einen Blick lesbar — sie ist
- * die einzige Bedeutung, die die Höhe eines Kopfes trägt.
+ * die einzige Bedeutung, die die Hoehe eines Kopfes traegt.
  */
 const KOPF_ABSTAND = 8.37;
 /**
- * Wie weit links der Kopfmitte der Hals steht. Er läuft nicht durch die Mitte
- * des Kopfes, sondern an seiner linken Flanke — bündig mit dessen linkem
+ * Wie weit links der Kopfmitte der Hals steht. Er laeuft nicht durch die Mitte
+ * des Kopfes, sondern an seiner linken Flanke — buendig mit dessen linkem
  * Rand, wie in der Vorlage.
  */
 const HALS_VERSATZ = 4.02;
 /**
  * Wie tief die Halsenden unter der Notenlinie liegen — und damit die Balken.
- * Alle Hälse eines Taktes enden gleich tief, gleich auf welcher Seite der
- * Linie ihr Kopf steht; sonst träfen sie ihren gemeinsamen Balken nicht.
+ * Alle Haelse eines Taktes enden gleich tief, gleich auf welcher Seite der
+ * Linie ihr Kopf steht; sonst traefen sie ihren gemeinsamen Balken nicht.
  */
 const HALS_TIEFE = 35.74;
 /** Luft zwischen Taktstrich und erstem Schlag des Taktes. */
 const TAKT_INNENABSTAND = 14;
 /**
  * Der halbe Taktstrich: er steht symmetrisch um die Notenlinie, gleich weit
- * darüber wie darunter, und reicht weder an die Köpfe noch an die Balken.
+ * darueber wie darunter, und reicht weder an die Koepfe noch an die Balken.
  *
  * Auch das ist am `2006Trommelfont` ausgemessen. Der Taktstrich ist dort ein
- * kurzer Strich quer über die Linie — er umschliesst die Noten nicht, sondern
+ * kurzer Strich quer ueber die Linie — er umschliesst die Noten nicht, sondern
  * markiert nur die Stelle auf der Linie, an der der Takt wechselt.
  */
-const TAKTSTRICH_HALBLÄNGE = 8.71;
+const TAKTSTRICH_HALBLAENGE = 8.71;
 /**
- * Die Masse der Wiederholungsklammer. Für sie gibt es noch keine Vorlage: die
- * Schrift hat Wiederholungszeichen, aber der ausgewertete Auszug enthält
- * keines. Die Werte stehen darum nur im Verhältnis zum Taktstrich, bis ein
+ * Die Masse der Wiederholungsklammer. Fuer sie gibt es noch keine Vorlage: die
+ * Schrift hat Wiederholungszeichen, aber der ausgewertete Auszug enthaelt
+ * keines. Die Werte stehen darum nur im Verhaeltnis zum Taktstrich, bis ein
  * echtes Muster sie ersetzt.
  */
 const KLAMMER_STRICH_ABSTAND = 3;
 const KLAMMER_PUNKT_ABSTAND = 3;
-const KLAMMER_PUNKT_HÖHE = 5;
+const KLAMMER_PUNKT_HOEHE = 5;
 /** Breite der Vers-Nummer und der Taktart links vor dem ersten Taktstrich. */
 const VERS_NUMMER_BREITE = 26;
 const TAKTART_BREITE = 26;
 const VERS_KOPF_BREITE = VERS_NUMMER_BREITE + TAKTART_BREITE;
-/** Länge der senkrechten Linie, die einen Schlepp über seinem Notenkopf anzeigt. */
-const VORSCHLAG_LÄNGE = 12;
+/** Laenge der senkrechten Linie, die einen Schlepp ueber seinem Notenkopf anzeigt. */
+const VORSCHLAG_LAENGE = 12;
 /** Abstand des Punktes rechts neben dem Notenkopf. */
 const PUNKT_ABSTAND = 7;
 
 /**
- * Wie eine Figur gezeichnet wird. Eine neue Basler Figur einzuführen heisst,
- * sie in `Figur` einzutragen und hier ihre Zeichnung zu wählen — der Compiler
+ * Wie eine Figur gezeichnet wird. Eine neue Basler Figur einzufuehren heisst,
+ * sie in `Figur` einzutragen und hier ihre Zeichnung zu waehlen — der Compiler
  * erzwingt beides. Das Modell bleibt unangetastet.
  */
 type Zeichnung = "einfach" | "mitVorschlag";
@@ -130,18 +130,18 @@ export type Glyph =
   | {
       readonly typ: "notenkopf";
       readonly x: number;
-      /** Über der Notenlinie für rechts, darunter für links. */
+      /** Ueber der Notenlinie fuer rechts, darunter fuer links. */
       readonly y: number;
       readonly hand: Hand;
-      /** Die Hüllmasse des Kopfes. Welche Form sie füllt, wählt der Renderer. */
+      /** Die Huellmasse des Kopfes. Welche Form sie fuellt, waehlt der Renderer. */
       readonly breite: number;
-      readonly höhe: number;
+      readonly hoehe: number;
     }
   | {
       readonly typ: "hals";
       /** Am Notenkopf. */
       readonly yOben: number;
-      /** Auf Balkenhöhe, unter der Notenlinie. */
+      /** Auf Balkenhoehe, unter der Notenlinie. */
       readonly yUnten: number;
       readonly x: number;
     }
@@ -155,7 +155,7 @@ export type Glyph =
     }
   | {
       readonly typ: "vorschlag";
-      /** Der Schlepp-Strich steht über dem Notenkopf. */
+      /** Der Schlepp-Strich steht ueber dem Notenkopf. */
       readonly x: number;
       readonly yOben: number;
       readonly yUnten: number;
@@ -174,16 +174,16 @@ export type Glyph =
       readonly typ: "taktart";
       readonly x: number;
       readonly y: number;
-      readonly zähler: number;
+      readonly zaehler: number;
       readonly nenner: number;
     };
 
 /**
- * Eine Balkengruppe aus ungleich langen Schlägen. Eine punktierte Achtel neben
- * einer Sechzehntel bräuchte einen Balkenstummel am einzelnen Hals; den bauen
+ * Eine Balkengruppe aus ungleich langen Schlaegen. Eine punktierte Achtel neben
+ * einer Sechzehntel braeuchte einen Balkenstummel am einzelnen Hals; den bauen
  * wir noch nicht. Bis dahin wird lieber geworfen als falsch gezeichnet: mit
- * nur den durchgehenden Balken sähe die Sechzehntel wie eine Achtel aus, und
- * ein falscher Rhythmus fällt niemandem auf.
+ * nur den durchgehenden Balken saehe die Sechzehntel wie eine Achtel aus, und
+ * ein falscher Rhythmus faellt niemandem auf.
  */
 export class UngleicheBalkengruppeError extends Error {
   constructor(
@@ -191,7 +191,7 @@ export class UngleicheBalkengruppeError extends Error {
     readonly taktNummer: number,
     werte: readonly Bruch[],
   ) {
-    const gelistet = werte.map((w) => `${w.zähler}/${w.nenner}`).join(", ");
+    const gelistet = werte.map((w) => `${w.zaehler}/${w.nenner}`).join(", ");
     super(
       `Vers ${versNummer}, Takt ${taktNummer}: Balkengruppe aus ungleichen ` +
         `Werten (${gelistet}) — Balkenstummel sind noch nicht gebaut`,
@@ -202,16 +202,16 @@ export class UngleicheBalkengruppeError extends Error {
 
 export interface Layout {
   readonly breite: number;
-  readonly höhe: number;
+  readonly hoehe: number;
   readonly glyphen: readonly Glyph[];
 }
 
 /** Die Breite eines Taktes in abstrakten Einheiten, inklusive Innenabstand. */
 const taktBreite = (taktart: Taktart): number =>
-  TAKT_INNENABSTAND + alsZahl(taktLänge(taktart)) * EINHEITEN_PRO_GANZE;
+  TAKT_INNENABSTAND + alsZahl(taktLaenge(taktart)) * EINHEITEN_PRO_GANZE;
 
 /** Die Art des Striches an Position `index` unter `anzahl` Strichen des Verses. */
-const strichartFür = (index: number, anzahl: number, wiederholungen: 1 | 2): Strichart => {
+const strichartFuer = (index: number, anzahl: number, wiederholungen: 1 | 2): Strichart => {
   if (wiederholungen === 1) return "einfach";
   if (index === 0) return "wiederholungAnfang";
   if (index === anzahl - 1) return "wiederholungEnde";
@@ -228,8 +228,8 @@ const taktstrich = (
   linieY: number,
   strichart: Strichart,
 ): Extract<Glyph, { typ: "taktstrich" }> => {
-  const yOben = linieY - TAKTSTRICH_HALBLÄNGE;
-  const yUnten = linieY + TAKTSTRICH_HALBLÄNGE;
+  const yOben = linieY - TAKTSTRICH_HALBLAENGE;
+  const yUnten = linieY + TAKTSTRICH_HALBLAENGE;
   const innen = strichart === "wiederholungAnfang" ? 1 : -1;
 
   return {
@@ -244,10 +244,10 @@ const taktstrich = (
         ? []
         : [
             // Um die Notenlinie herum, nicht um die Mitte des Striches: der
-            // Strich reicht bis zu den Balken hinunter, die Punkte gehören
+            // Strich reicht bis zu den Balken hinunter, die Punkte gehoeren
             // dorthin, wo gelesen wird.
-            { x: x + innen * KLAMMER_PUNKT_ABSTAND, y: linieY - KLAMMER_PUNKT_HÖHE },
-            { x: x + innen * KLAMMER_PUNKT_ABSTAND, y: linieY + KLAMMER_PUNKT_HÖHE },
+            { x: x + innen * KLAMMER_PUNKT_ABSTAND, y: linieY - KLAMMER_PUNKT_HOEHE },
+            { x: x + innen * KLAMMER_PUNKT_ABSTAND, y: linieY + KLAMMER_PUNKT_HOEHE },
           ],
   };
 };
@@ -261,14 +261,14 @@ interface PlatzierterSchlag {
   readonly halsX: number;
 }
 
-/** Die Höhe des Notenkopfes: rechts über der Notenlinie, links darunter. */
-const kopfHöhe = (hand: Hand, linieY: number): number =>
+/** Die Hoehe des Notenkopfes: rechts ueber der Notenlinie, links darunter. */
+const kopfHoehe = (hand: Hand, linieY: number): number =>
   hand === "rechts" ? linieY - KOPF_ABSTAND : linieY + KOPF_ABSTAND;
 
 /**
- * Wie viele Fahnen ein notierter Wert trägt — Achtel eine, Sechzehntel zwei,
- * ab der Viertel keine. Punktierungen zählen wie ihr ungepunkteter Grundwert:
- * eine punktierte Achtel trägt eine Fahne. Dieselbe Zahl bestimmt, wie viele
+ * Wie viele Fahnen ein notierter Wert traegt — Achtel eine, Sechzehntel zwei,
+ * ab der Viertel keine. Punktierungen zaehlen wie ihr ungepunkteter Grundwert:
+ * eine punktierte Achtel traegt eine Fahne. Dieselbe Zahl bestimmt, wie viele
  * Balkenlinien eine Gruppe bekommt.
  */
 const fahnenAnzahl = (wert: Bruch): number => {
@@ -276,37 +276,37 @@ const fahnenAnzahl = (wert: Bruch): number => {
   let grenze = bruch(1, 4);
   while (vergleiche(wert, grenze) < 0) {
     anzahl += 1;
-    grenze = bruch(grenze.zähler, grenze.nenner * 2);
+    grenze = bruch(grenze.zaehler, grenze.nenner * 2);
   }
   return anzahl;
 };
 
 /** Ab der Viertel wird nicht mehr gebalkt. */
-const istBalkenfähig = (wert: Bruch): boolean => fahnenAnzahl(wert) > 0;
+const istBalkenfaehig = (wert: Bruch): boolean => fahnenAnzahl(wert) > 0;
 
 const istZweierpotenz = (n: number): boolean => n > 0 && (n & (n - 1)) === 0;
 
 /**
  * Ob der Wert punktiert ist — 3/8 ist die punktierte Viertel, 3/16 die
- * punktierte Achtel. Da `bruch` kürzt, ist ein Zähler von 3 über einer
+ * punktierte Achtel. Da `bruch` kuerzt, ist ein Zaehler von 3 ueber einer
  * Zweierpotenz das sichere Kennzeichen.
  */
-const istPunktiert = (wert: Bruch): boolean => wert.zähler === 3 && istZweierpotenz(wert.nenner);
+const istPunktiert = (wert: Bruch): boolean => wert.zaehler === 3 && istZweierpotenz(wert.nenner);
 
-/** Auf welche Zählzeit des Taktes eine Position fällt — exakt, ohne Fliesskomma. */
-const zählzeitIndex = (position: Bruch, zeit: Bruch): number =>
-  Math.floor((position.zähler * zeit.nenner) / (position.nenner * zeit.zähler));
+/** Auf welche Zaehlzeit des Taktes eine Position faellt — exakt, ohne Fliesskomma. */
+const zaehlzeitIndex = (position: Bruch, zeit: Bruch): number =>
+  Math.floor((position.zaehler * zeit.nenner) / (position.nenner * zeit.zaehler));
 
 /**
- * Die Balkengruppen eines Taktes: aufeinanderfolgende balkenfähige Schläge auf
- * derselben Zählzeit. Ein Schlag allein auf seiner Zählzeit bekommt keinen
- * Balken, und über den Taktstrich reicht keine Gruppe — sie entstehen je Takt.
+ * Die Balkengruppen eines Taktes: aufeinanderfolgende balkenfaehige Schlaege auf
+ * derselben Zaehlzeit. Ein Schlag allein auf seiner Zaehlzeit bekommt keinen
+ * Balken, und ueber den Taktstrich reicht keine Gruppe — sie entstehen je Takt.
  */
 const balkenGruppen = (
   platzierte: readonly PlatzierterSchlag[],
   taktart: Taktart,
 ): PlatzierterSchlag[][] => {
-  const zeit = zählzeit(taktart);
+  const zeit = zaehlzeit(taktart);
   const gruppen: PlatzierterSchlag[][] = [];
   let laufende: PlatzierterSchlag[] = [];
   let laufendeZeit: number | undefined;
@@ -318,11 +318,11 @@ const balkenGruppen = (
   };
 
   for (const platzierter of platzierte) {
-    if (!istBalkenfähig(platzierter.schlag.wert)) {
+    if (!istBalkenfaehig(platzierter.schlag.wert)) {
       schliesse();
       continue;
     }
-    const index = zählzeitIndex(platzierter.schlag.position, zeit);
+    const index = zaehlzeitIndex(platzierter.schlag.position, zeit);
     if (index !== laufendeZeit) schliesse();
     laufendeZeit = index;
     laufende.push(platzierter);
@@ -363,7 +363,7 @@ const legeTakt = (
 
   for (const platzierter of platzierte) {
     const { schlag, x, halsX } = platzierter;
-    const kopfY = kopfHöhe(schlag.hand, linieY);
+    const kopfY = kopfHoehe(schlag.hand, linieY);
 
     glyphen.push({ typ: "hals", x: halsX, yOben: kopfY, yUnten: balkenY });
     glyphen.push({
@@ -372,19 +372,19 @@ const legeTakt = (
       y: kopfY,
       hand: schlag.hand,
       breite: KOPF_BREITE,
-      höhe: KOPF_HÖHE,
+      hoehe: KOPF_HOEHE,
     });
 
-    // Der Schlepp-Strich sitzt über dem Kopf, nicht neben ihm: er hängt am
-    // Schlag und trägt darum keine eigene Handhöhe. Er beginnt am oberen Rand
-    // des Kopfes, nicht in dessen Mitte — sonst steckte seine halbe Länge in
-    // der Tinte des Kopfes und läse sich als durchgeschobener Hals.
+    // Der Schlepp-Strich sitzt ueber dem Kopf, nicht neben ihm: er haengt am
+    // Schlag und traegt darum keine eigene Handhoehe. Er beginnt am oberen Rand
+    // des Kopfes, nicht in dessen Mitte — sonst steckte seine halbe Laenge in
+    // der Tinte des Kopfes und laese sich als durchgeschobener Hals.
     if (figurZeichnung[schlag.figur] === "mitVorschlag") {
-      const kopfRand = kopfY - KOPF_HÖHE / 2;
+      const kopfRand = kopfY - KOPF_HOEHE / 2;
       glyphen.push({
         typ: "vorschlag",
         x,
-        yOben: kopfRand - VORSCHLAG_LÄNGE,
+        yOben: kopfRand - VORSCHLAG_LAENGE,
         yUnten: kopfRand,
       });
     }
@@ -392,7 +392,7 @@ const legeTakt = (
       glyphen.push({ typ: "punkt", x: x + PUNKT_ABSTAND, y: kopfY });
     }
 
-    // Was kein Balken trägt, trägt seine Fahnen selbst — sonst läse sich eine
+    // Was kein Balken traegt, traegt seine Fahnen selbst — sonst laese sich eine
     // einzelne Achtel wie eine Viertel.
     const fahnen = fahnenAnzahl(schlag.wert);
     if (fahnen > 0 && !gebalkt.has(platzierter)) {
@@ -420,18 +420,20 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     typ: "taktart",
     x: RAND + VERS_NUMMER_BREITE,
     y: linieY,
-    zähler: vers.taktart.zähler,
+    zaehler: vers.taktart.zaehler,
     nenner: vers.taktart.nenner,
   });
   glyphen.push({ typ: "notenlinie", x1: inhaltX, x2: inhaltX + breite, y: linieY });
 
   const strichAnzahl = vers.takte.length + 1;
   vers.takte.forEach((takt, index) => {
-    const überlauf = taktÜberlauf(takt, vers.taktart);
-    if (überlauf) throw new UngültigerTaktError(nummer, index + 1, überlauf, vers.taktart);
+    const ueberlauf = taktUeberlauf(takt, vers.taktart);
+    if (ueberlauf) throw new UngueltigerTaktError(nummer, index + 1, ueberlauf, vers.taktart);
 
     const taktX = inhaltX + index * taktBreite(vers.taktart);
-    glyphen.push(taktstrich(taktX, linieY, strichartFür(index, strichAnzahl, vers.wiederholungen)));
+    glyphen.push(
+      taktstrich(taktX, linieY, strichartFuer(index, strichAnzahl, vers.wiederholungen)),
+    );
     legeTakt(takt, taktX, linieY, vers.taktart, nummer, index + 1, glyphen);
   });
 
@@ -440,7 +442,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
       taktstrich(
         inhaltX + breite,
         linieY,
-        strichartFür(strichAnzahl - 1, strichAnzahl, vers.wiederholungen),
+        strichartFuer(strichAnzahl - 1, strichAnzahl, vers.wiederholungen),
       ),
     );
   }
@@ -450,17 +452,17 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
 
 export const layout = (marsch: Marsch): Layout => {
   const glyphen: Glyph[] = [];
-  glyphen.push({ typ: "titel", x: RAND, y: RAND + TITEL_HÖHE / 2, text: marsch.titel });
+  glyphen.push({ typ: "titel", x: RAND, y: RAND + TITEL_HOEHE / 2, text: marsch.titel });
 
   let breite = 0;
   marsch.verse.forEach((vers, versIndex) => {
-    const linieY = RAND + TITEL_HÖHE + versIndex * VERS_HÖHE + NOTENLINIE_ABSTAND;
+    const linieY = RAND + TITEL_HOEHE + versIndex * VERS_HOEHE + NOTENLINIE_ABSTAND;
     breite = Math.max(breite, legeVers(vers, versIndex + 1, linieY, glyphen));
   });
 
   return {
     breite: breite + RAND,
-    höhe: RAND + TITEL_HÖHE + marsch.verse.length * VERS_HÖHE,
+    hoehe: RAND + TITEL_HOEHE + marsch.verse.length * VERS_HOEHE,
     glyphen,
   };
 };

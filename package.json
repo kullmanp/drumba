@@ -11,8 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "check": "tsc --noEmit && vitest run && prettier --check .",
-    "prepare": "git config core.hooksPath .githooks"
+    "check": "tsc --noEmit && vitest run && prettier --check . && npm run --silent lint:ascii",
+    "prepare": "git config core.hooksPath .githooks",
+    "lint:ascii": "! git grep --untracked -n -I -P '[\\x{C4}\\x{D6}\\x{DC}\\x{E4}\\x{F6}\\x{FC}\\x{DF}]' -- . ':(exclude)*.md'"
   },
   "dependencies": {
     "react": "19.2.8",

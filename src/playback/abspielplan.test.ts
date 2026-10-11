@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
-import { UngültigerTaktError } from "../model/marsch";
+import { UngueltigerTaktError } from "../model/marsch";
 import { abspielplan, VORSCHLAG_VORLAUF } from "./abspielplan";
 
 // --- Halterungen -----------------------------------------------------------
@@ -21,7 +21,7 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
 });
 
 const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Takt[]): Vers => ({
-  taktart: { zähler: taktart[0], nenner: taktart[1] },
+  taktart: { zaehler: taktart[0], nenner: taktart[1] },
   wiederholungen,
   takte,
 });
@@ -42,8 +42,8 @@ describe("Dupfen", () => {
 });
 
 describe("Takte", () => {
-  it("lässt den nächsten Takt nach der Länge des vorigen beginnen", () => {
-    // 6/8 zählt zwei punktierte Viertel; bei Tempo 100 dauert der Takt 1.2 s.
+  it("laesst den naechsten Takt nach der Laenge des vorigen beginnen", () => {
+    // 6/8 zaehlt zwei punktierte Viertel; bei Tempo 100 dauert der Takt 1.2 s.
     const m = marsch(vers([6, 8], 1, dupfenTakt(2, [3, 8]), dupfenTakt(2, [3, 8])));
 
     expect(zeiten(m, 100)).toEqual([0, 0.6, 1.2, 1.8]);
@@ -64,7 +64,7 @@ describe("Wiederholungen", () => {
     expect(zeiten(m, 60)).toEqual([0, 1]);
   });
 
-  it("lässt den nächsten Vers ohne Lücke auf den wiederholten folgen", () => {
+  it("laesst den naechsten Vers ohne Luecke auf den wiederholten folgen", () => {
     const m = marsch(
       vers([2, 4], 2, dupfenTakt(1, [2, 4])),
       vers([2, 4], 1, dupfenTakt(1, [2, 4])),
@@ -86,8 +86,8 @@ describe("Tempo", () => {
     expect(schnell).toEqual(langsam.map((zeit) => zeit / 2));
   });
 
-  it("hält den Puls über einen Wechsel der Taktart: 6/8 und 2/4 dauern gleich lang", () => {
-    // Je ein Takt, gefolgt von einer Dupfe, die den Beginn des nächsten Verses markiert.
+  it("haelt den Puls ueber einen Wechsel der Taktart: 6/8 und 2/4 dauern gleich lang", () => {
+    // Je ein Takt, gefolgt von einer Dupfe, die den Beginn des naechsten Verses markiert.
     const danach = vers([2, 4], 1, dupfenTakt(1, [2, 4]));
     const achtel = marsch(vers([6, 8], 1, dupfenTakt(6, [1, 8])), danach);
     const viertel = marsch(vers([2, 4], 1, dupfenTakt(2, [1, 4])), danach);
@@ -98,7 +98,7 @@ describe("Tempo", () => {
 });
 
 describe("Schlepp", () => {
-  // Ein Dupfe vorweg, damit der Vorschlag nicht vor den Anfang fällt.
+  // Ein Dupfe vorweg, damit der Vorschlag nicht vor den Anfang faellt.
   const mitSchlepp = marsch(
     vers([2, 4], 1, {
       schlaege: [
@@ -112,7 +112,7 @@ describe("Schlepp", () => {
     // Tempo 60: die zweite Viertel liegt bei 1 s.
     const [, , hauptschlag] = abspielplan(mitSchlepp, 60);
 
-    expect(hauptschlag).toEqual({ zeit: 1, hand: "links", lautstärke: 1 });
+    expect(hauptschlag).toEqual({ zeit: 1, hand: "links", lautstaerke: 1 });
   });
 
   it("setzt einen leiseren Vorschlag in der anderen Hand kurz davor", () => {
@@ -121,11 +121,11 @@ describe("Schlepp", () => {
     expect(vorschlag!.hand).toBe("rechts");
     expect(vorschlag!.zeit).toBeLessThan(hauptschlag!.zeit);
     expect(vorschlag!.zeit).toBeGreaterThan(dupfe!.zeit);
-    expect(vorschlag!.lautstärke).toBeLessThan(hauptschlag!.lautstärke);
-    expect(vorschlag!.lautstärke).toBeGreaterThan(0);
+    expect(vorschlag!.lautstaerke).toBeLessThan(hauptschlag!.lautstaerke);
+    expect(vorschlag!.lautstaerke).toBeGreaterThan(0);
   });
 
-  it("hält den Abstand des Vorschlags bei jedem Tempo gleich", () => {
+  it("haelt den Abstand des Vorschlags bei jedem Tempo gleich", () => {
     const abstand = (tempo: number): number => {
       const [, vorschlag, hauptschlag] = abspielplan(mitSchlepp, tempo);
       return hauptschlag!.zeit - vorschlag!.zeit;
@@ -134,7 +134,7 @@ describe("Schlepp", () => {
     expect(abstand(50)).toBeCloseTo(abstand(150), 9);
   });
 
-  it("lässt den Vorschlag eines Schlepps am Anfang vor die Zeit null fallen", () => {
+  it("laesst den Vorschlag eines Schlepps am Anfang vor die Zeit null fallen", () => {
     const m = marsch(vers([2, 4], 1, { schlaege: [schlag("Schlepp", "rechts", [0, 1], [2, 4])] }));
     const [vorschlag, hauptschlag] = abspielplan(m, 100);
 
@@ -144,7 +144,7 @@ describe("Schlepp", () => {
 });
 
 describe("Reihenfolge", () => {
-  it("ordnet nach der Zeit, auch wenn ein Vorschlag vor den vorigen Schlag fällt", () => {
+  it("ordnet nach der Zeit, auch wenn ein Vorschlag vor den vorigen Schlag faellt", () => {
     // So schnell, dass eine Sechzehntel nur halb so lang dauert wie der Vorlauf.
     const tempo = 30 / VORSCHLAG_VORLAUF;
     const m = marsch(
@@ -162,18 +162,18 @@ describe("Reihenfolge", () => {
   });
 });
 
-describe("Ungültige Takte", () => {
-  // Fünf Achtel in einem 2/4-Takt, im zweiten Vers.
-  const überlaufender = marsch(
+describe("Ungueltige Takte", () => {
+  // Fuenf Achtel in einem 2/4-Takt, im zweiten Vers.
+  const ueberlaufender = marsch(
     vers([6, 8], 1, dupfenTakt(6, [1, 8])),
     vers([2, 4], 1, dupfenTakt(5, [1, 8])),
   );
 
-  it("spielt einen überlaufenden Takt nicht still, sondern wirft", () => {
-    expect(() => abspielplan(überlaufender, 100)).toThrow(UngültigerTaktError);
+  it("spielt einen ueberlaufenden Takt nicht still, sondern wirft", () => {
+    expect(() => abspielplan(ueberlaufender, 100)).toThrow(UngueltigerTaktError);
   });
 
   it("benennt Vers und Takt des Fehlers", () => {
-    expect(() => abspielplan(überlaufender, 100)).toThrow(/Vers 2.*Takt 1/);
+    expect(() => abspielplan(ueberlaufender, 100)).toThrow(/Vers 2.*Takt 1/);
   });
 });

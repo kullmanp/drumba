@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { übungsmarsch } from "./beispiel/uebungsmarsch";
+import { uebungsmarsch } from "./beispiel/uebungsmarsch";
 import { abspielplan } from "./playback/abspielplan";
 import type { Wiedergabe } from "./playback/wiedergabe";
 import { spiele } from "./playback/wiedergabe";
-import { Zündstoffnoten } from "./render/zuendstoffnoten";
+import { Zuendstoffnoten } from "./render/zuendstoffnoten";
 
-/** Das Tempo, mit dem die Seite öffnet, in Zählzeiten pro Minute. */
+/** Das Tempo, mit dem die Seite oeffnet, in Zaehlzeiten pro Minute. */
 const START_TEMPO = "100";
 
 export const App = () => {
@@ -14,10 +14,10 @@ export const App = () => {
   const wiedergabe = useRef<Wiedergabe | null>(null);
 
   const tempo = Number(tempoEingabe);
-  const tempoGültig = tempoEingabe.trim() !== "" && Number.isFinite(tempo) && tempo > 0;
+  const tempoGueltig = tempoEingabe.trim() !== "" && Number.isFinite(tempo) && tempo > 0;
 
   const abspielen = () => {
-    wiedergabe.current = spiele(abspielplan(übungsmarsch, tempo), () => setSpielt(false));
+    wiedergabe.current = spiele(abspielplan(uebungsmarsch, tempo), () => setSpielt(false));
     setSpielt(true);
   };
 
@@ -32,7 +32,7 @@ export const App = () => {
   return (
     <main>
       <div className="steuerung">
-        <button type="button" onClick={abspielen} disabled={spielt || !tempoGültig}>
+        <button type="button" onClick={abspielen} disabled={spielt || !tempoGueltig}>
           Play
         </button>
         <button type="button" onClick={anhalten} disabled={!spielt}>
@@ -46,10 +46,10 @@ export const App = () => {
             value={tempoEingabe}
             onChange={(e) => setTempoEingabe(e.target.value)}
           />{" "}
-          Zählzeiten pro Minute
+          Zaehlzeiten pro Minute
         </label>
       </div>
-      <Zündstoffnoten marsch={übungsmarsch} />
+      <Zuendstoffnoten marsch={uebungsmarsch} />
     </main>
   );
 };
