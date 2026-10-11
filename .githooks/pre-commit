@@ -1,0 +1,3 @@
+#!/bin/sh
+# Typecheck, tests and formatting before every commit. Wired up by `npm install` (prepare).
+exec npm run --silent check

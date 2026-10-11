@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "check": "tsc --noEmit && vitest run && prettier --check .",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "react": "19.2.8",
