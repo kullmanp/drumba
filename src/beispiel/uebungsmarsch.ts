@@ -4,8 +4,9 @@ import { andereHand } from "../model/marsch";
 
 /**
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
- * dem Repertoire, sondern eine Uebung, die beide Figuren dieser Iteration zeigt
- * — Dupfe und Schlepp — auf beiden Haenden, in 6/8 und in 2/4.
+ * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
+ * Dupfe, Schlepp und Fuenferruf — auf beiden Haenden, in 6/8 und in 2/4. Ein
+ * Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich.
  *
  * Die Balkengruppen sind bewusst durchweg gleichwertig: Balkenstummel fuer eine
  * gemischte Gruppe gibt es noch nicht, und das Layout wirft, statt sie falsch
@@ -42,6 +43,17 @@ export const uebungsmarsch: Marsch = {
         wechselnd(["Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe", "Dupfe"], "rechts", 8),
         // Schlepp auf jede Zaehlzeit.
         wechselnd(["Schlepp", "Dupfe", "Dupfe", "Schlepp", "Dupfe", "Dupfe"], "rechts", 8),
+        // Ein Fuenferruf auf jede Zaehlzeit, jeder mit seiner Landung im Takt.
+        {
+          schlaege: [
+            schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+            schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+            schlag("Dupfe", "links", [2, 8], [1, 8]),
+            schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+            schlag("Dupfe", "rechts", [4, 8], [1, 8]),
+            schlag("Dupfe", "links", [5, 8], [1, 8]),
+          ],
+        },
         // Punktierte Viertel ueber die erste Zaehlzeit, dann drei Achtel.
         {
           schlaege: [
@@ -70,6 +82,15 @@ export const uebungsmarsch: Marsch = {
           "rechts",
           16,
         ),
+        // Vier Achtel; der Fuenferruf auf der letzten landet auf dem naechsten Taktbeginn.
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+            schlag("Dupfe", "links", [1, 8], [1, 8]),
+            schlag("Dupfe", "links", [2, 8], [1, 8]),
+            schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+          ],
+        },
         // Zwei Viertel — ohne Balken, der Schlepp diesmal auf der linken Hand.
         {
           schlaege: [

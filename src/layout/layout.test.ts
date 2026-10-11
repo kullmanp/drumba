@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
-import { UngueltigerTaktError } from "../model/marsch";
+import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { layout, UngleicheBalkengruppeError } from "./layout";
 
 // --- Halterungen -----------------------------------------------------------
@@ -680,5 +680,99 @@ describe("Gemischte Balkengruppe", () => {
   it("laesst eine Gruppe aus gleichen Werten durch", () => {
     const gleich = marsch("Gleich", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
     expect(() => layout(gleich)).not.toThrow();
+  });
+});
+
+describe("Fuenferruf", () => {
+  it("zeichnet einen Fuenferruf ohne Landung nicht, sondern wirft", () => {
+    const m = marsch(
+      "Ohne Landung",
+      vers([2, 4], 1, { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])] }),
+    );
+    expect(() => layout(m)).toThrow(UngueltigerRufError);
+  });
+
+  /** 2/4: Fuenferruf rechts auf der ersten Achtel, Landung auf der zweiten, dann eine Viertel. */
+  const imTakt = marsch(
+    "Ruf im Takt",
+    vers([2, 4], 1, {
+      schlaege: [
+        schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+        schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+        schlag("Dupfe", "links", [1, 4], [1, 4]),
+      ],
+    }),
+  );
+
+  it("zeichnet den Ruf als Schlepp, mit Vorschlag ueber seinem Kopf", () => {
+    const [vorschlag, ...weitere] = glyphen(imTakt, "vorschlag");
+    const rufKopf = glyphen(imTakt, "notenkopf")[0]!;
+
+    expect(weitere).toEqual([]);
+    expect(vorschlag!.x).toBe(rufKopf.x);
+  });
+
+  it("setzt einen Wirbel aus zwei Strichen auf den Hals des Rufs", () => {
+    const [striche, ...weitere] = glyphen(imTakt, "wirbelstriche");
+    const rufHals = glyphen(imTakt, "hals")[0]!;
+
+    expect(weitere).toEqual([]);
+    expect(striche!.anzahl).toBe(2);
+    expect(striche!.x).toBe(rufHals.x);
+    expect(striche!.y).toBeGreaterThan(rufHals.yOben);
+    expect(striche!.y).toBeLessThan(rufHals.yUnten);
+  });
+
+  /** 2/4: Fuenferruf auf der letzten Achtel, Landung auf dem naechsten Taktbeginn. */
+  const ueberDenTaktstrich = marsch(
+    "Ruf ueber den Taktstrich",
+    vers(
+      [2, 4],
+      1,
+      {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+        ],
+      },
+      { schlaege: [schlag("Dupfe", "rechts", [0, 1], [2, 4])] },
+    ),
+  );
+
+  /** Ob ein Punkt ueber dem Kopf steht, waagrecht innerhalb seiner Breite. */
+  const ueberKopf = (x: number, y: number, kopf: GlyphVom<"notenkopf">): boolean =>
+    Math.abs(x - kopf.x) <= kopf.breite / 2 && y < kopf.y - kopf.hoehe / 2;
+
+  it("schlaegt einen Bogen vom Kopf des Rufs zum Kopf der Landung", () => {
+    const [bogen, ...weitere] = glyphen(imTakt, "bogen");
+    const [rufKopf, landungKopf] = glyphen(imTakt, "notenkopf");
+
+    expect(weitere).toEqual([]);
+    expect(ueberKopf(bogen!.x1, bogen!.y1, rufKopf!)).toBe(true);
+    expect(ueberKopf(bogen!.x2, bogen!.y2, landungKopf!)).toBe(true);
+    expect(bogen!.scheitelY).toBeLessThan(Math.min(bogen!.y1, bogen!.y2));
+  });
+
+  it("fuehrt den Bogen ueber den Taktstrich zur Landung im naechsten Takt", () => {
+    const [bogen] = glyphen(ueberDenTaktstrich, "bogen");
+    const koepfe = glyphen(ueberDenTaktstrich, "notenkopf");
+    const zwischen = glyphen(ueberDenTaktstrich, "taktstrich")[1]!;
+
+    expect(ueberKopf(bogen!.x1, bogen!.y1, koepfe[2]!)).toBe(true);
+    expect(ueberKopf(bogen!.x2, bogen!.y2, koepfe[3]!)).toBe(true);
+    expect(bogen!.x1).toBeLessThan(zwischen.x);
+    expect(bogen!.x2).toBeGreaterThan(zwischen.x);
+  });
+
+  it("schreibt die 5 ueber den Bogen, zwischen seine Enden", () => {
+    const [zahl, ...weitere] = glyphen(imTakt, "rufZahl");
+    const [bogen] = glyphen(imTakt, "bogen");
+
+    expect(weitere).toEqual([]);
+    expect(zahl!.text).toBe("5");
+    expect(zahl!.x).toBeGreaterThan(bogen!.x1);
+    expect(zahl!.x).toBeLessThan(bogen!.x2);
+    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
   });
 });

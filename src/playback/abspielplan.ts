@@ -1,11 +1,12 @@
 import type { Bruch } from "../model/bruch";
-import { addiere, alsZahl, dividiere, NULL } from "../model/bruch";
-import type { Hand, Marsch } from "../model/marsch";
+import { addiere, alsZahl, bruch, dividiere, multipliziere, NULL } from "../model/bruch";
+import type { Hand, Marsch, Schlag } from "../model/marsch";
 import {
   andereHand,
+  FIGURMERKMALE,
+  FUENFERRUF_DAUER,
+  pruefeMarsch,
   taktLaenge,
-  taktUeberlauf,
-  UngueltigerTaktError,
   zaehlzeit,
 } from "../model/marsch";
 
@@ -38,20 +39,30 @@ export const VORSCHLAG_VORLAUF = 0.03;
 const VORSCHLAG_LAUTSTAERKE = 0.5;
 
 /**
+ * Die Schlaege, die eine Figur klingen laesst: Hand und Versatz in Ganzen ab
+ * ihrer Position. Der Vorschlag eines Schlepps gehoert nicht dazu — sein Abstand
+ * ist eine Geste in Sekunden, kein Notenwert.
+ *
+ * Der Fuenferruf spielt hier nur seine ersten vier Schlaege, gleichmaessig ueber
+ * seine Achtel verteilt; der fuenfte ist die Landung, ein eigener Schlag.
+ */
+const figurSchlaege = (schlag: Schlag): { hand: Hand; versatz: Bruch }[] => {
+  if (schlag.figur !== "Fuenferruf") return [{ hand: schlag.hand, versatz: NULL }];
+  const andere = andereHand(schlag.hand);
+  return [schlag.hand, schlag.hand, andere, andere].map((hand, i) => ({
+    hand,
+    versatz: multipliziere(FUENFERRUF_DAUER, bruch(i, 4)),
+  }));
+};
+
+/**
  * Der Abspielplan eines Marsches. `tempo` zaehlt Zaehlzeiten pro Minute, in jeder
  * Taktart: eine punktierte Viertel in 6/8 dauert so lang wie eine Viertel in
  * 2/4. Gerechnet wird in exakten Zaehlzeiten, erst ganz am Ende in Sekunden.
  */
 export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
-  // Ein ueberlaufender Takt ist ein Datenfehler und wird nicht still gespielt.
-  marsch.verse.forEach((vers, versIndex) => {
-    vers.takte.forEach((takt, taktIndex) => {
-      const ueberlauf = taktUeberlauf(takt, vers.taktart);
-      if (ueberlauf) {
-        throw new UngueltigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);
-      }
-    });
-  });
+  // Ein ueberlaufender Takt oder ein Ruf ohne Landung wird nicht still gespielt.
+  pruefeMarsch(marsch);
 
   const sekunden = (zaehlzeiten: Bruch): number => (alsZahl(zaehlzeiten) * 60) / tempo;
   const anschlaege: Anschlag[] = [];
@@ -62,15 +73,20 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
     const takte = Array.from({ length: vers.wiederholungen }, () => vers.takte).flat();
     for (const takt of takte) {
       for (const schlag of takt.schlaege) {
-        const zeit = sekunden(addiere(taktbeginn, dividiere(schlag.position, zaehlzeitLaenge)));
-        if (schlag.figur === "Schlepp") {
+        const zeitpunkt = (versatz: Bruch): number =>
+          sekunden(
+            addiere(taktbeginn, dividiere(addiere(schlag.position, versatz), zaehlzeitLaenge)),
+          );
+        if (FIGURMERKMALE[schlag.figur].vorschlag) {
           anschlaege.push({
-            zeit: zeit - VORSCHLAG_VORLAUF,
+            zeit: zeitpunkt(NULL) - VORSCHLAG_VORLAUF,
             hand: andereHand(schlag.hand),
             lautstaerke: VORSCHLAG_LAUTSTAERKE,
           });
         }
-        anschlaege.push({ zeit, hand: schlag.hand, lautstaerke: 1 });
+        for (const { hand, versatz } of figurSchlaege(schlag)) {
+          anschlaege.push({ zeit: zeitpunkt(versatz), hand, lautstaerke: 1 });
+        }
       }
       taktbeginn = addiere(taktbeginn, dividiere(taktLaenge(vers.taktart), zaehlzeitLaenge));
     }

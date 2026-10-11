@@ -42,6 +42,17 @@ const FAHNE_BREITE = 7;
 /** Die Fahne haengt am unteren Halsende und schwingt nach rechts oben aus. */
 const FAHNE_STEIGUNG = 6;
 const FAHNE_ABSTAND = 5;
+/**
+ * Die Striche des Wirbels queren den Hals schraeg nach rechts oben, mittig um
+ * die Hoehe, die das Layout nennt. Noch ohne Vorlage, nach Augenmass an ZicZac.
+ */
+const WIRBEL_BREITE = 6;
+const WIRBEL_STEIGUNG = 3;
+const WIRBEL_ABSTAND = 3.5;
+const WIRBEL_STAERKE = 1.1;
+/** Der Bogen eines Rufs ist feiner als der Hals. */
+const BOGEN_STAERKE = 0.6;
+const RUF_ZAHL_GROESSE = 8;
 
 /**
  * Die Halbachsen der Ellipse, die eine gegebene Huellbox unter `KOPF_NEIGUNG`
@@ -145,6 +156,51 @@ const zeichne = (glyph: Glyph) => {
           y2={glyph.yUnten}
           strokeWidth={VORSCHLAG_STAERKE}
         />
+      );
+    case "wirbelstriche":
+      return (
+        <>
+          {Array.from({ length: glyph.anzahl }, (_, i) => {
+            const y = glyph.y + (i - (glyph.anzahl - 1) / 2) * WIRBEL_ABSTAND;
+            return (
+              <line
+                key={i}
+                x1={glyph.x - WIRBEL_BREITE / 2}
+                y1={y + WIRBEL_STEIGUNG / 2}
+                x2={glyph.x + WIRBEL_BREITE / 2}
+                y2={y - WIRBEL_STEIGUNG / 2}
+                strokeWidth={WIRBEL_STAERKE}
+              />
+            );
+          })}
+        </>
+      );
+    case "bogen": {
+      // Ein quadratischer Bogen erreicht bei t = 1/2 den Mittelwert aus Enden und
+      // doppeltem Kontrollpunkt — so liegt sein Scheitel dort, wo das Layout will.
+      const kontrollY = 2 * glyph.scheitelY - (glyph.y1 + glyph.y2) / 2;
+      const kontrollX = (glyph.x1 + glyph.x2) / 2;
+      return (
+        <path
+          d={`M ${glyph.x1} ${glyph.y1} Q ${kontrollX} ${kontrollY} ${glyph.x2} ${glyph.y2}`}
+          fill="none"
+          strokeWidth={BOGEN_STAERKE}
+        />
+      );
+    }
+    case "rufZahl":
+      return (
+        <text
+          x={glyph.x}
+          y={glyph.y}
+          fontSize={RUF_ZAHL_GROESSE}
+          fontStyle="italic"
+          textAnchor="middle"
+          fill="currentColor"
+          stroke="none"
+        >
+          {glyph.text}
+        </text>
       );
     case "punkt":
       return (

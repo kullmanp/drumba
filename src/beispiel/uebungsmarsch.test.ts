@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { layout } from "../layout/layout";
-import { taktUeberlauf } from "../model/marsch";
+import { pruefeMarsch } from "../model/marsch";
 import { uebungsmarsch } from "./uebungsmarsch";
 
 describe("Uebungsmarsch", () => {
-  it("fuellt jeden Takt gueltig", () => {
-    for (const vers of uebungsmarsch.verse) {
-      for (const takt of vers.takte) {
-        expect(taktUeberlauf(takt, vers.taktart)).toBeUndefined();
-      }
-    }
+  it("ist gueltig: jeder Takt passt, jeder Ruf landet", () => {
+    expect(() => pruefeMarsch(uebungsmarsch)).not.toThrow();
   });
 
-  it("zeigt beide Figuren dieser Iteration", () => {
+  it("zeigt alle Figuren des Modells", () => {
     const figuren = new Set(
       uebungsmarsch.verse.flatMap((v) => v.takte.flatMap((t) => t.schlaege.map((s) => s.figur))),
     );
-    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp"]));
+    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp", "Fuenferruf"]));
+  });
+
+  it("zeigt einen Fuenferruf im Takt und einen, der ueber den Taktstrich landet", () => {
+    const glyphen = layout(uebungsmarsch).glyphen;
+    const striche = glyphen.filter((g) => g.typ === "taktstrich").map((g) => g.x);
+    const boegen = glyphen.filter((g) => g.typ === "bogen");
+    const ueberquert = (b: (typeof boegen)[number]) => striche.some((x) => b.x1 < x && x < b.x2);
+
+    expect(boegen.some((b) => !ueberquert(b))).toBe(true);
+    expect(boegen.some(ueberquert)).toBe(true);
   });
 
   it("zeigt beide Haende — die Notenkoepfe liegen ueber und unter der Linie", () => {

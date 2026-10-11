@@ -92,10 +92,11 @@ Which hand plays the Schlag — left or right. Zündstoffnoten writes the hand d
 Nothing is left to the reader to infer, so the model stores it explicitly on every Schlag.
 Auto-filling by the alternation rule is an authoring convenience, not a gap in the model.
 
-**Ruf** (deferred):
+**Ruf**:
 The family of measured rolls, counted by their number of strokes — the repertoire uses 3, 5,
 7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
-strokes. Not modelled or drawn yet; how it is written is not settled.
+strokes; its last stroke is the **Landung**, a Schlag of its own. Only the **Fünferruf** is
+modelled so far.
 
 **Fünferruf** (mit Schlepp):
 The most common Ruf. Five strokes: Schlepp rechts, Dupfe rechts, Dupfe links, Dupfe links,
@@ -155,6 +156,10 @@ not shrink or grow with Tempo.
 The mark that shows a **Ruf** is one figure rather than its constituent strokes: slashes across
 the Ruf's Hals, its stroke count written above, and a slur to the **Landung**. Not a bracket
 above the Hälse.
+
+**Bogen**:
+The slur from a Ruf to its Landung, arching over both Notenköpfe — across the Taktstrich when
+the Landung falls in the next Takt. Part of the **Wirbel**.
 
 **Landung**:
 The last stroke of a Ruf — the Schlag the roll lands on. It is a Schlag of its own, with its

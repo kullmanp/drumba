@@ -1,7 +1,35 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "./bruch";
-import type { Schlag, Takt } from "./marsch";
-import { andereHand, taktLaenge, taktUeberlauf, zaehlzeit } from "./marsch";
+import type { Figur, Hand, Marsch, Schlag, Takt } from "./marsch";
+import {
+  andereHand,
+  pruefeMarsch,
+  taktLaenge,
+  taktUeberlauf,
+  UngueltigerRufError,
+  zaehlzeit,
+} from "./marsch";
+
+// --- Halterungen -----------------------------------------------------------
+
+const schlag = (
+  figur: Figur,
+  hand: Hand,
+  position: [number, number],
+  wert: [number, number],
+): Schlag => ({ figur, hand, position: bruch(...position), wert: bruch(...wert) });
+
+/** Ein 2/4-Vers aus den gegebenen Takten. */
+const zweiViertel = (...takte: Schlag[][]): Marsch => ({
+  titel: "Test",
+  verse: [
+    {
+      taktart: { zaehler: 2, nenner: 4 },
+      wiederholungen: 1,
+      takte: takte.map((schlaege) => ({ schlaege })),
+    },
+  ],
+});
 
 const dupfe = (position: [number, number], wert: [number, number]): Schlag => ({
   figur: "Dupfe",
@@ -9,6 +37,8 @@ const dupfe = (position: [number, number], wert: [number, number]): Schlag => ({
   position: bruch(...position),
   wert: bruch(...wert),
 });
+
+// --- Tests -----------------------------------------------------------------
 
 describe("taktLaenge", () => {
   it("misst einen 6/8-Takt als 6/8 einer Ganzen", () => {
@@ -80,5 +110,80 @@ describe("zaehlzeit", () => {
 
   it("behandelt das ungerade 5/8 als einfache Taktart", () => {
     expect(zaehlzeit({ zaehler: 5, nenner: 8 })).toEqual({ zaehler: 1, nenner: 8 });
+  });
+});
+
+describe("pruefeMarsch: Fuenferruf und Landung", () => {
+  it("laesst einen Ruf mit Landung eine Achtel spaeter in derselben Hand gelten", () => {
+    const m = zweiViertel([
+      schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+      schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+    ]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft einen Ruf, auf den kein Schlag mehr folgt", () => {
+    const m = zweiViertel([schlag("Fuenferruf", "rechts", [3, 8], [1, 8])]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft eine Landung, die nicht genau eine Achtel nach dem Ruf liegt", () => {
+    const m = zweiViertel([
+      schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+      schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft eine Landung in der anderen Hand", () => {
+    const m = zweiViertel([
+      schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+      schlag("Dupfe", "links", [1, 8], [1, 8]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("laesst eine Landung auf dem naechsten Taktbeginn gelten, ueber den Taktstrich", () => {
+    const m = zweiViertel(
+      [schlag("Dupfe", "rechts", [0, 1], [3, 8]), schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+      [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
+    );
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("misst den Abstand ueber den Taktstrich hinweg", () => {
+    // Der Ruf liegt eine Viertel vor dem Taktende, die Landung also zu spaet.
+    const m = zweiViertel(
+      [schlag("Fuenferruf", "rechts", [1, 4], [1, 8])],
+      [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("sucht die Landung nicht im naechsten Vers", () => {
+    const [vers] = zweiViertel([
+      schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+      schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+    ]).verse;
+    const [naechster] = zweiViertel([schlag("Dupfe", "rechts", [0, 1], [2, 4])]).verse;
+    const m: Marsch = { titel: "Test", verse: [vers!, naechster!] };
+
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("laesst den gespiegelten Ruf links mit Landung links gelten", () => {
+    const m = zweiViertel([
+      schlag("Fuenferruf", "links", [0, 1], [1, 8]),
+      schlag("Dupfe", "links", [1, 8], [1, 8]),
+    ]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("benennt Vers und Takt des Rufs", () => {
+    const m = zweiViertel(
+      [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
+      [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+    );
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1.*Takt 2/);
   });
 });

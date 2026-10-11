@@ -1,7 +1,7 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, vergleiche } from "../model/bruch";
-import type { Figur, Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
-import { taktLaenge, taktUeberlauf, UngueltigerTaktError, zaehlzeit } from "../model/marsch";
+import type { Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
+import { FIGURMERKMALE, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
 
 /**
  * Das Zuendstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
@@ -89,18 +89,25 @@ const VERS_KOPF_BREITE = VERS_NUMMER_BREITE + TAKTART_BREITE;
 const VORSCHLAG_LAENGE = 12;
 /** Abstand des Punktes rechts neben dem Notenkopf. */
 const PUNKT_ABSTAND = 7;
+/**
+ * Der Bogen eines Rufs: wie weit seine Enden von der Kopfmitte zur Mitte des
+ * Bogens hin ruecken — weg vom Vorschlag-Strich des Rufs —, wie viel Luft sie
+ * ueber dem Kopf lassen und wie hoch der Bogen sich darueber woelbt. Noch ohne
+ * Vorlage, nach Augenmass.
+ */
+const BOGEN_EINZUG = KOPF_BREITE / 4;
+const BOGEN_LUFT = 2;
+const BOGEN_HOEHE = 8;
+/** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
+const ZAHL_LUFT = 2;
 
 /**
- * Wie eine Figur gezeichnet wird. Eine neue Basler Figur einzufuehren heisst,
- * sie in `Figur` einzutragen und hier ihre Zeichnung zu waehlen — der Compiler
- * erzwingt beides. Das Modell bleibt unangetastet.
+ * Wie viele Striche des Wirbels den Hals eines Rufs queren. Vorerst fuer jeden
+ * Ruf zwei, wie beim Fuenferruf in ZicZac; ob die Zahl mit dem Ruf waechst, ist
+ * noch nicht ausgemessen. Was eine Figur sonst ausmacht — Vorschlag, Ruf —
+ * steht in `FIGURMERKMALE` im Modell.
  */
-type Zeichnung = "einfach" | "mitVorschlag";
-
-const figurZeichnung: Record<Figur, Zeichnung> = {
-  Dupfe: "einfach",
-  Schlepp: "mitVorschlag",
-};
+const WIRBEL_STRICHE = 2;
 
 export type GlyphTyp = Glyph["typ"];
 
@@ -160,7 +167,34 @@ export type Glyph =
       readonly yOben: number;
       readonly yUnten: number;
     }
+  | {
+      readonly typ: "wirbelstriche";
+      /** Auf dem Hals des Rufs; Neigung und Abstand der Striche waehlt der Renderer. */
+      readonly x: number;
+      readonly y: number;
+      /** Wie viele Striche den Hals queren. */
+      readonly anzahl: number;
+    }
   | { readonly typ: "punkt"; readonly x: number; readonly y: number }
+  | {
+      readonly typ: "rufZahl";
+      /** Die Mitte der Zahl, ueber dem Bogen. */
+      readonly x: number;
+      /** Die Grundlinie der Zahl. */
+      readonly y: number;
+      readonly text: string;
+    }
+  | {
+      readonly typ: "bogen";
+      /** Ueber dem Kopf des Rufs. */
+      readonly x1: number;
+      readonly y1: number;
+      /** Ueber dem Kopf der Landung — auch jenseits des Taktstrichs. */
+      readonly x2: number;
+      readonly y2: number;
+      /** Die Hoehe, bis zu der sich der Bogen zwischen seinen Enden woelbt. */
+      readonly scheitelY: number;
+    }
   | {
       readonly typ: "balken";
       readonly x1: number;
@@ -340,7 +374,7 @@ const legeTakt = (
   versNummer: number,
   taktNummer: number,
   glyphen: Glyph[],
-): void => {
+): PlatzierterSchlag[] => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
   const platzierte = takt.schlaege.map((schlag) => {
     const x = inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE;
@@ -379,13 +413,24 @@ const legeTakt = (
     // Schlag und traegt darum keine eigene Handhoehe. Er beginnt am oberen Rand
     // des Kopfes, nicht in dessen Mitte — sonst steckte seine halbe Laenge in
     // der Tinte des Kopfes und laese sich als durchgeschobener Hals.
-    if (figurZeichnung[schlag.figur] === "mitVorschlag") {
+    const merkmale = FIGURMERKMALE[schlag.figur];
+    if (merkmale.vorschlag) {
       const kopfRand = kopfY - KOPF_HOEHE / 2;
       glyphen.push({
         typ: "vorschlag",
         x,
         yOben: kopfRand - VORSCHLAG_LAENGE,
         yUnten: kopfRand,
+      });
+    }
+    // Der Wirbel quert den Hals zwischen Notenlinie und Balken — dort, wo jeder
+    // Hals verlaeuft, gleich auf welcher Seite der Linie sein Kopf steht.
+    if (merkmale.ruf) {
+      glyphen.push({
+        typ: "wirbelstriche",
+        x: halsX,
+        y: linieY + HALS_TIEFE / 2,
+        anzahl: WIRBEL_STRICHE,
       });
     }
     if (istPunktiert(schlag.wert)) {
@@ -409,6 +454,41 @@ const legeTakt = (
       anzahl: fahnenAnzahl(gruppe[0]!.schlag.wert),
     });
   }
+
+  return platzierte;
+};
+
+/**
+ * Die Boegen der Rufe eines Verses, je vom Ruf zu seiner Landung — dem naechsten
+ * Schlag, auch ueber den Taktstrich. Dass es ihn gibt und er passt, hat
+ * `pruefeMarsch` schon sichergestellt. Ein Vers ist eine Zeile, also bricht
+ * kein Bogen um.
+ */
+const legeBoegen = (
+  platzierte: readonly PlatzierterSchlag[],
+  linieY: number,
+  glyphen: Glyph[],
+): void => {
+  const ueberKopf = (p: PlatzierterSchlag): number =>
+    kopfHoehe(p.schlag.hand, linieY) - KOPF_HOEHE / 2 - BOGEN_LUFT;
+
+  platzierte.forEach((ruf, index) => {
+    const merkmale = FIGURMERKMALE[ruf.schlag.figur].ruf;
+    if (!merkmale) return;
+    const landung = platzierte[index + 1]!;
+    const x1 = ruf.x + BOGEN_EINZUG;
+    const x2 = landung.x - BOGEN_EINZUG;
+    const y1 = ueberKopf(ruf);
+    const y2 = ueberKopf(landung);
+    const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
+    glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
+    glyphen.push({
+      typ: "rufZahl",
+      x: (x1 + x2) / 2,
+      y: scheitelY - ZAHL_LUFT,
+      text: String(merkmale.schlaege),
+    });
+  });
 };
 
 const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]): number => {
@@ -426,15 +506,12 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
   glyphen.push({ typ: "notenlinie", x1: inhaltX, x2: inhaltX + breite, y: linieY });
 
   const strichAnzahl = vers.takte.length + 1;
-  vers.takte.forEach((takt, index) => {
-    const ueberlauf = taktUeberlauf(takt, vers.taktart);
-    if (ueberlauf) throw new UngueltigerTaktError(nummer, index + 1, ueberlauf, vers.taktart);
-
+  const platzierte = vers.takte.flatMap((takt, index) => {
     const taktX = inhaltX + index * taktBreite(vers.taktart);
     glyphen.push(
       taktstrich(taktX, linieY, strichartFuer(index, strichAnzahl, vers.wiederholungen)),
     );
-    legeTakt(takt, taktX, linieY, vers.taktart, nummer, index + 1, glyphen);
+    return legeTakt(takt, taktX, linieY, vers.taktart, nummer, index + 1, glyphen);
   });
 
   if (vers.takte.length > 0) {
@@ -446,11 +523,15 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
       ),
     );
   }
+  legeBoegen(platzierte, linieY, glyphen);
 
   return inhaltX + breite;
 };
 
 export const layout = (marsch: Marsch): Layout => {
+  // Ein ueberlaufender Takt oder ein Ruf ohne Landung wird nicht still gezeichnet.
+  pruefeMarsch(marsch);
+
   const glyphen: Glyph[] = [];
   glyphen.push({ typ: "titel", x: RAND, y: RAND + TITEL_HOEHE / 2, text: marsch.titel });
 

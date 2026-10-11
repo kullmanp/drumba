@@ -1,5 +1,5 @@
 import type { Bruch } from "./bruch";
-import { addiere, bruch, NULL, vergleiche } from "./bruch";
+import { addiere, bruch, NULL, subtrahiere, vergleiche } from "./bruch";
 
 /**
  * Das kanonische Modell (ADR-0001). Es haelt alles, was Zuendstoffnoten sagen
@@ -14,14 +14,30 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
 /**
  * Die Art eines Schlags aus dem Basler Figurenvokabular. Flache Menge: ein
  * Schlepp ist eine eigene Figur, keine verzierte Dupfe. Das volle Vokabular
- * kommt spaeter — erweitern heisst hier eintragen und in `figurZeichnung`
- * (siehe Layout) die Geometrie ergaenzen.
+ * kommt spaeter — erweitern heisst hier eintragen und in `FIGURMERKMALE` sagen,
+ * was die Figur ausmacht; der Compiler erzwingt beides. Wie ein Ruf klingt,
+ * steht im Abspielplan.
  *
- * Die Ruf-Familie fehlt bewusst: wie ein Wirbel geschrieben wird, ist noch
- * nicht geklaert (siehe `GLOSSARY.md`), und eine Figur, die wir nicht zeichnen
- * koennen, soll das Modell nicht behaupten.
+ * Von der Ruf-Familie steht erst der Fuenferruf (mit Schlepp) hier. Er fuellt
+ * genau eine Achtel; seine Landung ist nicht Teil von ihm, sondern der naechste
+ * Schlag (ADR-0002) — `pruefeMarsch` stellt sicher, dass sie da ist.
  */
-export type Figur = "Dupfe" | "Schlepp";
+export type Figur = "Dupfe" | "Schlepp" | "Fuenferruf";
+
+/** Was eine Figur ausmacht, an einer Stelle — Layout und Wiedergabe lesen beide hier. */
+export interface Figurmerkmale {
+  /** Ob ein Vorschlag in der anderen Hand kurz vor dem Schlag liegt. */
+  readonly vorschlag: boolean;
+  /** Bei einem Ruf: wie viele Schlaege er zaehlt, die Landung eingerechnet. */
+  readonly ruf?: { readonly schlaege: number };
+}
+
+export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
+  Dupfe: { vorschlag: false },
+  Schlepp: { vorschlag: true },
+  // Der Fuenferruf beginnt mit einem Schlepp und hat darum dessen Vorschlag.
+  Fuenferruf: { vorschlag: true, ruf: { schlaege: 5 } },
+};
 
 /** Ein Schlag: das atomare Ereignis des Modells. */
 export interface Schlag {
@@ -117,3 +133,75 @@ const istZusammengesetzt = (taktart: Taktart): boolean =>
  */
 export const zaehlzeit = (taktart: Taktart): Bruch =>
   istZusammengesetzt(taktart) ? bruch(3, taktart.nenner) : bruch(1, taktart.nenner);
+
+/**
+ * Ein Ruf ohne gueltige Landung: kein Schlag danach, keiner genau eine Achtel
+ * spaeter oder einer in der falschen Hand. Ein Ruf, der nirgends landet, wird
+ * weder gezeichnet noch gespielt.
+ */
+export class UngueltigerRufError extends Error {
+  constructor(
+    readonly versNummer: number,
+    readonly taktNummer: number,
+    readonly schlag: Schlag,
+  ) {
+    super(
+      `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} ${schlag.hand} auf ` +
+        `${schlag.position.zaehler}/${schlag.position.nenner} hat keine Landung ` +
+        `eine Achtel spaeter in derselben Hand`,
+    );
+    this.name = "UngueltigerRufError";
+  }
+}
+
+/** Wie lange ein Fuenferruf von seinem Schlepp bis zur Landung dauert. */
+export const FUENFERRUF_DAUER = bruch(1, 8);
+
+/** Der Schlag nach einem anderen, mit seinem Abstand in Ganzen — auch ueber den Taktstrich. */
+interface Folgeschlag {
+  readonly schlag: Schlag;
+  readonly abstand: Bruch;
+}
+
+/**
+ * Der Schlag nach dem `index`-ten des Taktes `taktIndex` — im selben Takt oder
+ * als erster des naechsten. Ueber das Ende des Verses hinaus sucht er nicht:
+ * eine Landung im naechsten Vers oder in der Wiederholung gibt es noch nicht.
+ */
+const folgeschlag = (vers: Vers, taktIndex: number, index: number): Folgeschlag | undefined => {
+  const schlaege = vers.takte[taktIndex]!.schlaege;
+  const schlag = schlaege[index]!;
+  const imTakt = schlaege[index + 1];
+  if (imTakt) return { schlag: imTakt, abstand: subtrahiere(imTakt.position, schlag.position) };
+
+  const imNaechsten = vers.takte[taktIndex + 1]?.schlaege[0];
+  if (!imNaechsten) return undefined;
+  const bisTaktende = subtrahiere(taktLaenge(vers.taktart), schlag.position);
+  return { schlag: imNaechsten, abstand: addiere(bisTaktende, imNaechsten.position) };
+};
+
+/**
+ * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jeder Takt passt
+ * in seine Taktart, und jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
+ */
+export const pruefeMarsch = (marsch: Marsch): void => {
+  marsch.verse.forEach((vers, versIndex) => {
+    vers.takte.forEach((takt, taktIndex) => {
+      const ueberlauf = taktUeberlauf(takt, vers.taktart);
+      if (ueberlauf) {
+        throw new UngueltigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);
+      }
+      takt.schlaege.forEach((schlag, index) => {
+        if (!FIGURMERKMALE[schlag.figur].ruf) return;
+        const landung = folgeschlag(vers, taktIndex, index);
+        if (
+          !landung ||
+          vergleiche(landung.abstand, FUENFERRUF_DAUER) !== 0 ||
+          landung.schlag.hand !== schlag.hand
+        ) {
+          throw new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag);
+        }
+      });
+    });
+  });
+};

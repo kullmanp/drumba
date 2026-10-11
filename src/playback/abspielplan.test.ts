@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
-import { UngueltigerTaktError } from "../model/marsch";
+import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { abspielplan, VORSCHLAG_VORLAUF } from "./abspielplan";
 
 // --- Halterungen -----------------------------------------------------------
@@ -143,6 +143,70 @@ describe("Schlepp", () => {
   });
 });
 
+describe("Fuenferruf", () => {
+  /** Ein 2/4-Takt: Fuenferruf in `hand` auf der ersten Achtel, Landung auf der zweiten. */
+  const mitRuf = (hand: Hand): Marsch =>
+    marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Fuenferruf", hand, [0, 1], [1, 8]),
+          schlag("Dupfe", hand, [1, 8], [3, 8]),
+        ],
+      }),
+    );
+
+  it("spielt vier gleichmaessige Schlaege rechts, rechts, links, links und dann die Landung", () => {
+    // Tempo 60 in 2/4: eine Achtel dauert 0.5 s, eine Zweiunddreissigstel 0.125 s.
+    const [, ...schlaege] = abspielplan(mitRuf("rechts"), 60);
+
+    expect(schlaege.map((a) => [a.zeit, a.hand])).toEqual([
+      [0, "rechts"],
+      [0.125, "rechts"],
+      [0.25, "links"],
+      [0.375, "links"],
+      [0.5, "rechts"],
+    ]);
+  });
+
+  it("beginnt mit dem leiseren Vorschlag des Schlepps in der anderen Hand", () => {
+    const [vorschlag, erster] = abspielplan(mitRuf("rechts"), 60);
+
+    expect(vorschlag!.hand).toBe("links");
+    expect(vorschlag!.zeit).toBeLessThan(erster!.zeit);
+    expect(vorschlag!.lautstaerke).toBeLessThan(erster!.lautstaerke);
+  });
+
+  it("spielt die vier Schlaege und die Landung voll", () => {
+    const [, ...schlaege] = abspielplan(mitRuf("rechts"), 60);
+
+    expect(schlaege.every((a) => a.lautstaerke === 1)).toBe(true);
+  });
+
+  it("spiegelt den Ruf links", () => {
+    const [vorschlag, ...schlaege] = abspielplan(mitRuf("links"), 60);
+
+    expect(vorschlag!.hand).toBe("rechts");
+    expect(schlaege.map((a) => a.hand)).toEqual(["links", "links", "rechts", "rechts", "links"]);
+  });
+
+  it("spielt in 6/8 schneller als in 2/4, weil er immer eine Achtel fuellt", () => {
+    const abstand = (taktart: [number, number]): number => {
+      const m = marsch(
+        vers(taktart, 1, {
+          schlaege: [
+            schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+            schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+          ],
+        }),
+      );
+      const [, erster, zweiter] = abspielplan(m, 100);
+      return zweiter!.zeit - erster!.zeit;
+    };
+
+    expect(abstand([6, 8])).toBeLessThan(abstand([2, 4]));
+  });
+});
+
 describe("Reihenfolge", () => {
   it("ordnet nach der Zeit, auch wenn ein Vorschlag vor den vorigen Schlag faellt", () => {
     // So schnell, dass eine Sechzehntel nur halb so lang dauert wie der Vorlauf.
@@ -175,5 +239,14 @@ describe("Ungueltige Takte", () => {
 
   it("benennt Vers und Takt des Fehlers", () => {
     expect(() => abspielplan(ueberlaufender, 100)).toThrow(/Vers 2.*Takt 1/);
+  });
+});
+
+describe("Ungueltige Rufe", () => {
+  it("spielt einen Fuenferruf ohne Landung nicht, sondern wirft", () => {
+    const m = marsch(
+      vers([2, 4], 1, { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])] }),
+    );
+    expect(() => abspielplan(m, 100)).toThrow(UngueltigerRufError);
   });
 });

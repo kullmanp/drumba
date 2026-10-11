@@ -36,6 +36,12 @@ export const NULL: Bruch = bruch(0, 1);
 export const addiere = (a: Bruch, b: Bruch): Bruch =>
   bruch(a.zaehler * b.nenner + b.zaehler * a.nenner, a.nenner * b.nenner);
 
+export const subtrahiere = (a: Bruch, b: Bruch): Bruch =>
+  bruch(a.zaehler * b.nenner - b.zaehler * a.nenner, a.nenner * b.nenner);
+
+export const multipliziere = (a: Bruch, b: Bruch): Bruch =>
+  bruch(a.zaehler * b.zaehler, a.nenner * b.nenner);
+
 export const dividiere = (a: Bruch, b: Bruch): Bruch =>
   bruch(a.zaehler * b.nenner, a.nenner * b.zaehler);
 
