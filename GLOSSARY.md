@@ -87,6 +87,11 @@ seed entries:
 
 - **Dupfe**: a single stroke.
 - **Schlepp**: a flam.
+- **Doublé**: a Schlepp preceded by a soft Dupfe in the Schlepp's own Hand, a Sechzehntel
+  before the main stroke in every Taktart. A Doublé links is Dupfe links, Schlepp links. The
+  Doublé's position and Hand are those of the main stroke; the soft Dupfe belongs to the
+  figure, like the Vorschlag, and takes no room in the Takt. Written as a Schlepp whose
+  Vorschlag carries a Fahne at its top.
 
 **Hand**:
 Which hand plays the Schlag — left or right. Zündstoffnoten writes the hand down: it is the
@@ -154,7 +159,7 @@ Schlag, left on any other.
 **Fahne**:
 The hook on the lower end of a Hals, for a Schlag short enough to need one but not beamed to a
 neighbour. One for an Achtel, two for a Sechzehntel. A dotted value carries as many Fahnen as
-its undotted base.
+its undotted base. A Doublé's Vorschlag carries one at its top, whatever the Schlag's value.
 
 **Punkt**:
 The augmentation dot. It stands immediately right of the Notenkopf, at the head's own height —
