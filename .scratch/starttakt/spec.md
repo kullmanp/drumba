@@ -1,6 +1,6 @@
 # Starttakt — playback from a chosen Takt
 
-Status: needs-triage
+Status: ready-for-agent
 
 ## Problem Statement
 
@@ -53,11 +53,15 @@ Marsch. It is a place: a Vers index and a Takt index, both from 0.
 - A Schlag's Anschläge stay together: a Schlag kept by the Starttakt keeps its soft Dupfe, its
   Vorschlag and its rolled Dupfe, even when they sound before the Starttakt's beginning. A
   Schlag before the Starttakt contributes nothing, even when its sound reaches past the
-  Taktstrich.
+  Taktstrich. The boundary is strict for a Ruf too: a Fünferruf at the end of Takt 2 whose
+  Landung opens Takt 3 is dropped when Takt 3 is the Starttakt, and its Landung sounds alone,
+  as a Dupfe. The Ruf is written in Takt 2; to hear it, start there. (A Dreierruf sits on its
+  Landung, ADR-0004, so it is kept whole.)
 - If the Starttakt is Takt 1 of a Vers with an Auftakt, the Auftakt is played first.
 - Time 0 is the Starttakt's beginning, or the Auftakt's beginning when the Auftakt is played.
   Anything that belongs to a kept Schlag and sounds earlier gets a negative time, as a leading
-  Vorschlag does today, and the adapter's lead-in already copes with that.
+  Vorschlag does today, and the adapter's lead-in already copes with that. A Starttakt that
+  opens with a Pause keeps that silence: its first Anschlag falls at its written position.
 - The rolled Dupfe of a Dreierruf on the Starttakt's first Schlag still measure their gap from
   the Schlag written before it, even though that Schlag is not played. That keeps their
   rhythm the same as when the Marsch is played from the beginning.
@@ -68,7 +72,9 @@ Marsch. It is a place: a Vers index and a Takt index, both from 0.
 - `layout(marsch, starttakt?)`.
 - For every Takt the layout emits a `taktflaeche` glyph: its x range from Taktstrich to
   Taktstrich, a y range covering the Vers's notation, and its Vers and Takt index. It is the
-  click target, and the layout gives its bounds so the renderer computes no x.
+  click target, and the layout gives its bounds so the renderer computes no x. Takt 1's starts
+  at the Vers's first Taktstrich: the Auftakt before it has no click target, since starting
+  from Takt 1 plays it anyway.
 - With a Starttakt, the layout emits one `starttakt` glyph over that Takt's span.
 
 **Renderer.**
@@ -90,7 +96,7 @@ At the seams, relationships over constants (`CODING_STANDARDS.md`).
 - **Playback:**
   - Without a Starttakt, the plan is the same as today.
   - From a Starttakt in the middle of a Vers: the first Anschlag is the Starttakt's first
-    Schlag, at time 0, and the plan then matches the tail of the full plan shifted by the
+    Schlag at its position from time 0, the Starttakt's beginning, and the plan then matches the tail of the full plan shifted by the
     Starttakt's start time.
   - A Vers with Wiederholungen 2, started from its last Takt, plays that Takt, then the whole
     Vers again.
@@ -98,6 +104,8 @@ At the seams, relationships over constants (`CODING_STANDARDS.md`).
   - A Doublé on the Starttakt's first Schlag keeps its soft Dupfe, at a negative time.
   - A Dreierruf on the Starttakt's first Schlag keeps its rolled Dupfe at the same distances
     from it as in the full plan.
+  - A Fünferruf whose Landung opens the Starttakt is not played; the Landung is.
+  - A Starttakt opening with a Pause has its first Anschlag after time 0.
   - A Starttakt outside the Marsch is rejected.
 - **Layout:**
   - Every Takt has one `taktflaeche`, and neighbouring ones meet at their shared Taktstrich.
@@ -114,18 +122,20 @@ At the seams, relationships over constants (`CODING_STANDARDS.md`).
 - Keyboard control.
 - Remembering the Starttakt across page loads.
 
-## Open Questions
+## Decisions
 
-Decided by the agent without a grilling session; settle these before the spec is
-`ready-for-agent`.
+Settled in a grilling session on 2026-10-11:
 
-1. Is a Takt the right size of step, or should the start be a Schlag?
-2. Should the Auftakt play when starting from Takt 1? (Proposed: yes.)
-3. Should a Starttakt in a repeated Vers start in the first Durchgang and play the repeat?
-   (Proposed: yes.)
-4. Should a click on the marked Takt clear the mark, or is a separate control clearer?
-5. Should a click during playback restart playback from the new Starttakt, rather than only
-   move the mark?
+1. The start is a whole Takt, not a Schlag.
+2. From Takt 1 of a Vers with an Auftakt, the Auftakt plays first.
+3. A Starttakt in a repeated Vers starts in the first Durchgang and plays the repeat.
+4. A click on the marked Takt clears it; there is no separate control.
+5. A click during playback only moves the mark; it applies on the next Play.
+6. The Takt boundary is strict for a Ruf whose Landung opens the Starttakt: the Ruf is dropped.
+7. The Auftakt has no click target of its own.
+8. A Dreierruf on the Starttakt's first Schlag measures its gap from the unplayed Schlag
+   before it.
+9. A Starttakt opening with a Pause keeps the silence; time 0 is the Takt's beginning.
 
 ## Further Notes
 
