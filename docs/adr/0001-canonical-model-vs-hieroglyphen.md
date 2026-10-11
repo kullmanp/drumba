@@ -13,7 +13,7 @@ never authoritative.
 
 ## Consequences
 
-- A precise model always renders *down* to hieroglyphs; the reverse needs human input, which
+- A precise model always renders _down_ to hieroglyphs; the reverse needs human input, which
   is why import is its own path rather than a symmetric editor.
 - Every downstream feature (playback, transposition between notations, analysis) targets the
   canonical model only and never has to reconcile two authored representations.

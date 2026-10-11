@@ -28,8 +28,8 @@ _Avoid_: matchstick notation.
 
 **Hieroglyphen** (Hieroglyphenschrift, Winzer-Notenschrift):
 Older symbol-based notation (Severin, ~1865). Encodes figures/gestures, not exact durations,
-so it is **rhythmically imprecise**. In Drumba it is a lossy *rendering* of the canonical
-model, plus a separate lossy *import* path where the user supplies the missing rhythm.
+so it is **rhythmically imprecise**. In Drumba it is a lossy _rendering_ of the canonical
+model, plus a separate lossy _import_ path where the user supplies the missing rhythm.
 Hieroglyphen is never the source of truth.
 
 ### The document
@@ -99,12 +99,12 @@ strokes. Not modelled or drawn yet; how it is written is not settled.
 
 ### Notation elements
 
-The parts a Zündstoff score is drawn from. They are properties of the *drawing*, not of the
+The parts a Zündstoff score is drawn from. They are properties of the _drawing_, not of the
 canonical model — the model holds Schläge, and the renderer decides which of these appear.
 
 **Notenlinie**:
 The single horizontal line a Vers's Takte sit on. Schläge are drawn against it, not on it: the
-line runs *through* the notation rather than under it.
+line runs _through_ the notation rather than under it.
 
 **Notenkopf**:
 The filled oval head that draws a Schlag, tilted up to the right. It sits at one of exactly two
@@ -138,7 +138,7 @@ The grace stroke of a Schlepp, played with the other Hand. Not written as a note
 short **vertical line rising from the Notenkopf** of the Schlag it belongs to. Because it hangs
 off the head rather than standing beside it, it carries no Hand height — the reader infers the
 Vorschlag's Hand from the Schlepp's.
-Played softer than the main stroke and a short, fixed moment *before* it, so the main stroke
+Played softer than the main stroke and a short, fixed moment _before_ it, so the main stroke
 still falls on the Schlag's position. That moment is a gesture, not a rhythmic value: it does
 not shrink or grow with Tempo.
 

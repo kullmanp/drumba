@@ -35,8 +35,7 @@ const glyphen = <T extends GlyphTyp>(m: Marsch, typ: T): GlyphVom<T>[] =>
   layout(m).glyphen.filter((g): g is GlyphVom<T> => g.typ === typ);
 
 /** Die Abstände zwischen aufeinanderfolgenden Werten. */
-const abstaende = (werte: number[]): number[] =>
-  werte.slice(1).map((wert, i) => wert - werte[i]!);
+const abstaende = (werte: number[]): number[] => werte.slice(1).map((wert, i) => wert - werte[i]!);
 
 // --- Tests -----------------------------------------------------------------
 
@@ -141,12 +140,15 @@ describe("Schläge im Takt", () => {
   });
 
   it("hält den Kopf frei von der Notenlinie, statt sie zu berühren", () => {
-    const m = marsch("Zwei", vers([2, 4], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Dupfe", "links", [1, 8], [1, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Zwei",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 8], [1, 8]),
+        ],
+      }),
+    );
     const linie = glyphen(m, "notenlinie")[0]!;
 
     for (const kopf of glyphen(m, "notenkopf")) {
@@ -166,12 +168,15 @@ describe("Schläge im Takt", () => {
 });
 
 describe("Notenkopf", () => {
-  const gemischt = marsch("Zwei", vers([2, 4], 1, {
-    schlaege: [
-      schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-      schlag("Schlepp", "links", [1, 8], [1, 8]),
-    ],
-  }));
+  const gemischt = marsch(
+    "Zwei",
+    vers([2, 4], 1, {
+      schlaege: [
+        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+        schlag("Schlepp", "links", [1, 8], [1, 8]),
+      ],
+    }),
+  );
 
   it("gibt jedem Schlag genau einen Kopf, von links nach rechts", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
@@ -318,13 +323,16 @@ describe("Reihenfolge der Verse", () => {
 });
 
 describe("Schlepp", () => {
-  const m = marsch("Schlepp", vers([6, 8], 1, {
-    schlaege: [
-      schlag("Schlepp", "rechts", [0, 1], [1, 8]),
-      schlag("Dupfe", "links", [1, 8], [1, 8]),
-      schlag("Dupfe", "rechts", [2, 8], [1, 8]),
-    ],
-  }));
+  const m = marsch(
+    "Schlepp",
+    vers([6, 8], 1, {
+      schlaege: [
+        schlag("Schlepp", "rechts", [0, 1], [1, 8]),
+        schlag("Dupfe", "links", [1, 8], [1, 8]),
+        schlag("Dupfe", "rechts", [2, 8], [1, 8]),
+      ],
+    }),
+  );
 
   it("stellt den Vorschlag senkrecht über den Notenkopf seines Schlages", () => {
     const [vorschlag, ...weitere] = glyphen(m, "vorschlag");
@@ -345,9 +353,12 @@ describe("Schlepp", () => {
   });
 
   it("zeichnet den Strich auch über einem linken Notenkopf nach oben", () => {
-    const linkerSchlepp = marsch("Links", vers([2, 4], 1, {
-      schlaege: [schlag("Schlepp", "links", [0, 1], [1, 4])],
-    }));
+    const linkerSchlepp = marsch(
+      "Links",
+      vers([2, 4], 1, {
+        schlaege: [schlag("Schlepp", "links", [0, 1], [1, 4])],
+      }),
+    );
     const vorschlag = glyphen(linkerSchlepp, "vorschlag")[0]!;
     const kopf = glyphen(linkerSchlepp, "notenkopf")[0]!;
     const linie = glyphen(linkerSchlepp, "notenlinie")[0]!;
@@ -371,12 +382,15 @@ describe("Schlepp", () => {
 });
 
 describe("Punkt", () => {
-  const punktiert = marsch("Punktiert", vers([6, 8], 1, {
-    schlaege: [
-      schlag("Dupfe", "rechts", [0, 1], [3, 8]),
-      schlag("Dupfe", "links", [3, 8], [3, 8]),
-    ],
-  }));
+  const punktiert = marsch(
+    "Punktiert",
+    vers([6, 8], 1, {
+      schlaege: [
+        schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+        schlag("Dupfe", "links", [3, 8], [3, 8]),
+      ],
+    }),
+  );
 
   it("gibt jedem punktierten Wert einen Punkt", () => {
     expect(glyphen(punktiert, "punkt")).toHaveLength(2);
@@ -405,13 +419,16 @@ describe("Punkt", () => {
   });
 
   it("erkennt auch die punktierte Achtel", () => {
-    const m = marsch("Punktierte Achtel", vers([3, 8], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [3, 16]),
-        schlag("Dupfe", "links", [3, 16], [1, 16]),
-        schlag("Dupfe", "rechts", [1, 4], [1, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Punktierte Achtel",
+      vers([3, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [3, 16]),
+          schlag("Dupfe", "links", [3, 16], [1, 16]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+        ],
+      }),
+    );
     expect(glyphen(m, "punkt")).toHaveLength(1);
   });
 });
@@ -440,33 +457,36 @@ describe("Balken", () => {
   });
 
   it("zieht keinen Balken über den Taktstrich", () => {
-    const m = marsch(
-      "Zwei Takte",
-      vers([6, 8], 1, dupfenTakt(6, [1, 8]), dupfenTakt(6, [1, 8])),
-    );
+    const m = marsch("Zwei Takte", vers([6, 8], 1, dupfenTakt(6, [1, 8]), dupfenTakt(6, [1, 8])));
     expect(glyphen(m, "balken")).toHaveLength(4);
   });
 
   it("balkt keine Werte ab der Viertel", () => {
-    const m = marsch("Punktierte Viertel", vers([6, 8], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [3, 8]),
-        schlag("Dupfe", "links", [3, 8], [3, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Punktierte Viertel",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+          schlag("Dupfe", "links", [3, 8], [3, 8]),
+        ],
+      }),
+    );
     expect(glyphen(m, "balken")).toEqual([]);
   });
 
   it("lässt einen einzelnen Schlag auf einem Schlagwert unverbalkt", () => {
-    const m = marsch("Gemischt", vers([6, 8], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Dupfe", "links", [1, 8], [1, 4]),
-        schlag("Dupfe", "rechts", [3, 8], [1, 8]),
-        schlag("Dupfe", "links", [4, 8], [1, 8]),
-        schlag("Dupfe", "rechts", [5, 8], [1, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Gemischt",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 8], [1, 4]),
+          schlag("Dupfe", "rechts", [3, 8], [1, 8]),
+          schlag("Dupfe", "links", [4, 8], [1, 8]),
+          schlag("Dupfe", "rechts", [5, 8], [1, 8]),
+        ],
+      }),
+    );
     const haelse = glyphen(m, "hals");
     const balken = glyphen(m, "balken");
 
@@ -554,13 +574,16 @@ describe("Wiederholungsklammer", () => {
 
 describe("Fahne", () => {
   it("gibt einem unverbalkten Achtel eine Fahne", () => {
-    const m = marsch("Einzelnes Achtel", vers([6, 8], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Dupfe", "links", [1, 8], [1, 4]),
-        schlag("Dupfe", "rechts", [3, 8], [3, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Einzelnes Achtel",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 8], [1, 4]),
+          schlag("Dupfe", "rechts", [3, 8], [3, 8]),
+        ],
+      }),
+    );
     const [fahne, ...weitere] = glyphen(m, "fahne");
     const haelse = glyphen(m, "hals");
 
@@ -570,22 +593,28 @@ describe("Fahne", () => {
   });
 
   it("gibt einem Sechzehntel zwei Fahnen", () => {
-    const m = marsch("Sechzehntel allein", vers([2, 4], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 16]),
-        schlag("Dupfe", "links", [1, 4], [1, 4]),
-      ],
-    }));
+    const m = marsch(
+      "Sechzehntel allein",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+      }),
+    );
     expect(glyphen(m, "fahne").map((f) => f.anzahl)).toEqual([2]);
   });
 
   it("gibt Werten ab der Viertel keine Fahne", () => {
-    const m = marsch("Punktierte Viertel", vers([6, 8], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [3, 8]),
-        schlag("Dupfe", "links", [3, 8], [3, 8]),
-      ],
-    }));
+    const m = marsch(
+      "Punktierte Viertel",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+          schlag("Dupfe", "links", [3, 8], [3, 8]),
+        ],
+      }),
+    );
     expect(glyphen(m, "fahne")).toEqual([]);
   });
 
@@ -595,12 +624,15 @@ describe("Fahne", () => {
   });
 
   it("setzt die Fahne ans untere Ende des Halses", () => {
-    const m = marsch("Einzelnes Achtel", vers([2, 4], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Dupfe", "links", [1, 4], [1, 4]),
-      ],
-    }));
+    const m = marsch(
+      "Einzelnes Achtel",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+      }),
+    );
     expect(glyphen(m, "fahne")[0]!.y).toBeCloseTo(glyphen(m, "hals")[0]!.yUnten, 10);
   });
 });
@@ -615,7 +647,6 @@ describe("Balkenzahl", () => {
     const m = marsch("Acht Sechzehntel", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
     expect(glyphen(m, "balken").map((b) => b.anzahl)).toEqual([2, 2]);
   });
-
 });
 
 describe("Gemischte Balkengruppe", () => {

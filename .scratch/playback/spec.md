@@ -5,7 +5,7 @@ Status: done
 ## Problem Statement
 
 Drumba can draw a **Marsch** as **Zündstoffnoten**, but a drummer learning a Marsch wants to
-*hear* it as well as read it: to check a rhythm they are unsure of, or to play along. Right now
+_hear_ it as well as read it: to check a rhythm they are unsure of, or to play along. Right now
 the score is silent.
 
 Playback also tests the canonical model from a second direction. The renderer has shown the
@@ -103,7 +103,7 @@ the playing/stopped state and the tempo value. All timing comes from the timing 
 ## Testing Decisions
 
 **What makes a good test here.** As with the layout: call the timing function and assert on
-the returned data. Assert on *relationships* rather than on constants chosen by ear. For
+the returned data. Assert on _relationships_ rather than on constants chosen by ear. For
 example, "the Vorschlag comes before its main stroke and is quieter" is a good test, while
 "the Vorschlag is at −0.030 s" is not. Timing that follows from the model and Tempo is exact,
 so it may be asserted exactly. Examples are a Takt's length at a given Tempo and a Schlag's
@@ -154,7 +154,7 @@ model.
 `GLOSSARY.md` holds the two domain facts this iteration settled. **Tempo** counts Zählzeiten
 per minute with a constant pulse across Taktarten. The **Vorschlag** is a soft, fixed gesture
 just before the main stroke. Use the glossary's terms verbatim in identifiers. "Stroke" is on
-its Avoid list as a name for a **Schlag**. A timed sound in the playback list is *not* a
+its Avoid list as a name for a **Schlag**. A timed sound in the playback list is _not_ a
 Schlag, since a Schlepp yields two, so name it for what it is in German (e.g. `Anschlag`) and
 add the term to the glossary if it turns out to be a domain term rather than an implementation
 one.

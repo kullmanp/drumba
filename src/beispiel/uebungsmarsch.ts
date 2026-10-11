@@ -65,7 +65,11 @@ export const uebungsmarsch: Marsch = {
       wiederholungen: 1,
       takte: [
         // Acht Sechzehntel — eine Balkengruppe je Viertel.
-        wechselnd(Array.from({ length: 8 }, () => "Dupfe" as Figur), "rechts", 16),
+        wechselnd(
+          Array.from({ length: 8 }, () => "Dupfe" as Figur),
+          "rechts",
+          16,
+        ),
         // Zwei Viertel — ohne Balken, der Schlepp diesmal auf der linken Hand.
         {
           schlaege: [

@@ -126,7 +126,7 @@ the fixture for both the tests and the dev page.
 **What makes a good test here.** Tests assert on external behaviour of the layout function: for
 a given `Marsch`, what glyphs come out, in what order, at what positions, with what
 figure-specific geometry. They must not reach into layout internals, and must not assert on
-absolute pixel values chosen for aesthetics — assert on *relationships* (this glyph is left of
+absolute pixel values chosen for aesthetics — assert on _relationships_ (this glyph is left of
 that one; the grace note is offset from its main stem; the roll spans its written duration)
 rather than on magic numbers, so that visual tuning does not break the suite.
 

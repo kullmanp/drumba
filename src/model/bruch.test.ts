@@ -50,7 +50,6 @@ describe("Arithmetik", () => {
     for (let i = 0; i < 5; i++) summe = addiere(summe, achtel);
     expect(summe).toEqual({ zaehler: 5, nenner: 8 });
   });
-
 });
 
 describe("Vergleich", () => {

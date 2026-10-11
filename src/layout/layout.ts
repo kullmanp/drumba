@@ -291,8 +291,7 @@ const istZweierpotenz = (n: number): boolean => n > 0 && (n & (n - 1)) === 0;
  * punktierte Achtel. Da `bruch` kürzt, ist ein Zähler von 3 über einer
  * Zweierpotenz das sichere Kennzeichen.
  */
-const istPunktiert = (wert: Bruch): boolean =>
-  wert.zaehler === 3 && istZweierpotenz(wert.nenner);
+const istPunktiert = (wert: Bruch): boolean => wert.zaehler === 3 && istZweierpotenz(wert.nenner);
 
 /** Auf welche Zählzeit des Taktes eine Position fällt — exakt, ohne Fliesskomma. */
 const zaehlzeitIndex = (position: Bruch, zeit: Bruch): number =>
