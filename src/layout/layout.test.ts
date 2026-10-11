@@ -775,4 +775,57 @@ describe("Fuenferruf", () => {
     expect(zahl!.x).toBeLessThan(bogen!.x2);
     expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
   });
+
+  describe("der auf eine Zaehlzeit fuehrt", () => {
+    // In `ueberDenTaktstrich` steht der Ruf auf der letzten Achtel, hinter einer
+    // Achtel-Dupfe auf derselben Zaehlzeit, und landet auf dem naechsten Taktbeginn.
+    const ruf = () => ({
+      kopf: glyphen(ueberDenTaktstrich, "notenkopf")[2]!,
+      hals: glyphen(ueberDenTaktstrich, "hals")[2]!,
+    });
+
+    it("wird nicht mit der Achtel davor gebalkt, sondern traegt seine Fahne", () => {
+      const { hals } = ruf();
+      const balken = glyphen(ueberDenTaktstrich, "balken");
+      const fahnen = glyphen(ueberDenTaktstrich, "fahne");
+
+      expect(balken.some((b) => b.x1 <= hals.x && hals.x <= b.x2)).toBe(false);
+      expect(fahnen.filter((f) => f.x === hals.x).map((f) => f.anzahl)).toEqual([1]);
+    });
+
+    it("ist kleiner als ein gewoehnlicher Schlag, mit kuerzerem Hals", () => {
+      const { kopf, hals } = ruf();
+      const landung = glyphen(ueberDenTaktstrich, "notenkopf")[3]!;
+      const davor = glyphen(ueberDenTaktstrich, "hals")[1]!;
+
+      expect(kopf.hoehe).toBeLessThan(landung.hoehe);
+      expect(kopf.breite).toBeLessThan(landung.breite);
+      expect(hals.yUnten).toBeLessThan(davor.yUnten);
+      expect(glyphen(ueberDenTaktstrich, "fahne").find((f) => f.x === hals.x)!.y).toBe(hals.yUnten);
+    });
+
+    it("bleibt auf der Seite der Linie, die seine Hand sagt", () => {
+      const { kopf } = ruf();
+      const linie = glyphen(ueberDenTaktstrich, "notenlinie")[0]!;
+
+      expect(kopf.y + kopf.hoehe / 2).toBeLessThan(linie.y);
+    });
+
+    it("traegt den Wirbel weiter auf seinem kurzen Hals", () => {
+      const { hals } = ruf();
+      const [striche] = glyphen(ueberDenTaktstrich, "wirbelstriche");
+
+      expect(striche!.x).toBe(hals.x);
+      expect(striche!.y).toBeGreaterThan(hals.yOben);
+      expect(striche!.y).toBeLessThan(hals.yUnten);
+    });
+  });
+
+  it("balkt einen Ruf, der auf einer Zaehlzeit beginnt, wie gewohnt in seiner Gruppe", () => {
+    const rufHals = glyphen(imTakt, "hals")[0]!;
+    const balken = glyphen(imTakt, "balken");
+
+    expect(balken.some((b) => b.x1 === rufHals.x)).toBe(true);
+    expect(glyphen(imTakt, "notenkopf")[0]!.hoehe).toBe(glyphen(imTakt, "notenkopf")[1]!.hoehe);
+  });
 });

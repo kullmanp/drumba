@@ -135,3 +135,12 @@ chosen by eye or ear.
 
 `GLOSSARY.md` holds the terms this slice settled: **Fünferruf**, **Wirbel** and **Landung**.
 ADR-0002 records why the Landung is a Schlag of its own.
+
+## Comments
+
+**2026-10-11, after a first look.** A Fünferruf that does not start on a Zählzeit leads into
+one and stands free before it: never beamed to the Schläge before it, drawn smaller (head about
+two-thirds size, closer to the line, Hals about half as deep) with its own Fahne, measured by
+eye against ZicZac. A Fünferruf that starts on a Zählzeit beams as before. Open: the tradition
+may have a name for the Ruf that starts on a Zählzeit ("Volltakt-Fünfer"?), unconfirmed, so not
+in `GLOSSARY.md` yet.

@@ -1,5 +1,5 @@
 import type { Bruch } from "../model/bruch";
-import { alsZahl, bruch, vergleiche } from "../model/bruch";
+import { alsZahl, bruch, dividiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
 import { FIGURMERKMALE, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
 
@@ -108,6 +108,15 @@ const ZAHL_LUFT = 2;
  * steht in `FIGURMERKMALE` im Modell.
  */
 const WIRBEL_STRICHE = 2;
+/**
+ * Ein Ruf, der nicht auf einer Zaehlzeit beginnt, fuehrt auf eine hin und steht
+ * darum frei vor ihr: ungebalkt und kleiner, wie ein Vorschlag. Am Original
+ * (ZicZac) ausgemessen: der Kopf rund zwei Drittel so gross, naeher an der
+ * Linie, der Hals etwa halb so tief.
+ */
+const FREIER_RUF_KOPF = 0.65;
+const FREIER_RUF_KOPF_ABSTAND = 0.6 * KOPF_ABSTAND;
+const FREIER_RUF_HALS_TIEFE = 0.45 * HALS_TIEFE;
 
 export type GlyphTyp = Glyph["typ"];
 
@@ -293,11 +302,29 @@ interface PlatzierterSchlag {
   readonly x: number;
   /** Wo der Hals steht — an der linken Flanke des Kopfes. */
   readonly halsX: number;
+  /** Die Kopfmitte: auf der Seite der Linie, die die Hand sagt. */
+  readonly kopfY: number;
+  /** Die Huellmasse des Kopfes. */
+  readonly kopfBreite: number;
+  readonly kopfHoehe: number;
+  /** Wo der Hals endet — auf Balkenhoehe oder, beim freien Ruf, kuerzer. */
+  readonly halsEnde: number;
+  /** Ein Ruf, der frei vor seiner Zaehlzeit steht und nicht gebalkt wird. */
+  readonly frei: boolean;
 }
 
 /** Die Hoehe des Notenkopfes: rechts ueber der Notenlinie, links darunter. */
-const kopfHoehe = (hand: Hand, linieY: number): number =>
-  hand === "rechts" ? linieY - KOPF_ABSTAND : linieY + KOPF_ABSTAND;
+const kopfHoehe = (hand: Hand, linieY: number, abstand = KOPF_ABSTAND): number =>
+  hand === "rechts" ? linieY - abstand : linieY + abstand;
+
+/**
+ * Ob ein Schlag ein freier Ruf ist: ein Ruf, der nicht auf einer Zaehlzeit
+ * beginnt. Er fuehrt auf die naechste hin und wird nicht mit den Schlaegen vor
+ * ihm gebalkt. Beginnt er auf der Zaehlzeit, balkt er wie jeder Schlag.
+ */
+const istFreierRuf = (schlag: Schlag, taktart: Taktart): boolean =>
+  FIGURMERKMALE[schlag.figur].ruf !== undefined &&
+  dividiere(schlag.position, zaehlzeit(taktart)).nenner !== 1;
 
 /**
  * Wie viele Fahnen ein notierter Wert traegt — Achtel eine, Sechzehntel zwei,
@@ -352,7 +379,7 @@ const balkenGruppen = (
   };
 
   for (const platzierter of platzierte) {
-    if (!istBalkenfaehig(platzierter.schlag.wert)) {
+    if (!istBalkenfaehig(platzierter.schlag.wert) || platzierter.frei) {
       schliesse();
       continue;
     }
@@ -376,13 +403,24 @@ const legeTakt = (
   glyphen: Glyph[],
 ): PlatzierterSchlag[] => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
-  const platzierte = takt.schlaege.map((schlag) => {
+  const balkenY = linieY + HALS_TIEFE;
+  const platzierte = takt.schlaege.map((schlag): PlatzierterSchlag => {
     const x = inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE;
-    return { schlag, x, halsX: x - HALS_VERSATZ };
+    const frei = istFreierRuf(schlag, versTaktart);
+    const kopf = frei ? FREIER_RUF_KOPF : 1;
+    return {
+      schlag,
+      x,
+      halsX: x - HALS_VERSATZ * kopf,
+      kopfY: kopfHoehe(schlag.hand, linieY, frei ? FREIER_RUF_KOPF_ABSTAND : KOPF_ABSTAND),
+      kopfBreite: KOPF_BREITE * kopf,
+      kopfHoehe: KOPF_HOEHE * kopf,
+      halsEnde: frei ? linieY + FREIER_RUF_HALS_TIEFE : balkenY,
+      frei,
+    };
   });
   const gruppen = balkenGruppen(platzierte, versTaktart);
   const gebalkt = new Set(gruppen.flat());
-  const balkenY = linieY + HALS_TIEFE;
 
   for (const gruppe of gruppen) {
     const balken = new Set(gruppe.map((p) => fahnenAnzahl(p.schlag.wert)));
@@ -396,17 +434,16 @@ const legeTakt = (
   }
 
   for (const platzierter of platzierte) {
-    const { schlag, x, halsX } = platzierter;
-    const kopfY = kopfHoehe(schlag.hand, linieY);
+    const { schlag, x, halsX, kopfY, halsEnde } = platzierter;
 
-    glyphen.push({ typ: "hals", x: halsX, yOben: kopfY, yUnten: balkenY });
+    glyphen.push({ typ: "hals", x: halsX, yOben: kopfY, yUnten: halsEnde });
     glyphen.push({
       typ: "notenkopf",
       x,
       y: kopfY,
       hand: schlag.hand,
-      breite: KOPF_BREITE,
-      hoehe: KOPF_HOEHE,
+      breite: platzierter.kopfBreite,
+      hoehe: platzierter.kopfHoehe,
     });
 
     // Der Schlepp-Strich sitzt ueber dem Kopf, nicht neben ihm: er haengt am
@@ -415,21 +452,21 @@ const legeTakt = (
     // der Tinte des Kopfes und laese sich als durchgeschobener Hals.
     const merkmale = FIGURMERKMALE[schlag.figur];
     if (merkmale.vorschlag) {
-      const kopfRand = kopfY - KOPF_HOEHE / 2;
+      const kopfRand = kopfY - platzierter.kopfHoehe / 2;
       glyphen.push({
         typ: "vorschlag",
         x,
-        yOben: kopfRand - VORSCHLAG_LAENGE,
+        yOben: kopfRand - VORSCHLAG_LAENGE * (platzierter.kopfHoehe / KOPF_HOEHE),
         yUnten: kopfRand,
       });
     }
-    // Der Wirbel quert den Hals zwischen Notenlinie und Balken — dort, wo jeder
+    // Der Wirbel quert den Hals zwischen Notenlinie und Halsende — dort, wo jeder
     // Hals verlaeuft, gleich auf welcher Seite der Linie sein Kopf steht.
     if (merkmale.ruf) {
       glyphen.push({
         typ: "wirbelstriche",
         x: halsX,
-        y: linieY + HALS_TIEFE / 2,
+        y: (linieY + halsEnde) / 2,
         anzahl: WIRBEL_STRICHE,
       });
     }
@@ -441,7 +478,7 @@ const legeTakt = (
     // einzelne Achtel wie eine Viertel.
     const fahnen = fahnenAnzahl(schlag.wert);
     if (fahnen > 0 && !gebalkt.has(platzierter)) {
-      glyphen.push({ typ: "fahne", x: halsX, y: balkenY, anzahl: fahnen });
+      glyphen.push({ typ: "fahne", x: halsX, y: halsEnde, anzahl: fahnen });
     }
   }
 
@@ -464,19 +501,14 @@ const legeTakt = (
  * `pruefeMarsch` schon sichergestellt. Ein Vers ist eine Zeile, also bricht
  * kein Bogen um.
  */
-const legeBoegen = (
-  platzierte: readonly PlatzierterSchlag[],
-  linieY: number,
-  glyphen: Glyph[],
-): void => {
-  const ueberKopf = (p: PlatzierterSchlag): number =>
-    kopfHoehe(p.schlag.hand, linieY) - KOPF_HOEHE / 2 - BOGEN_LUFT;
+const legeBoegen = (platzierte: readonly PlatzierterSchlag[], glyphen: Glyph[]): void => {
+  const ueberKopf = (p: PlatzierterSchlag): number => p.kopfY - p.kopfHoehe / 2 - BOGEN_LUFT;
 
   platzierte.forEach((ruf, index) => {
     const merkmale = FIGURMERKMALE[ruf.schlag.figur].ruf;
     if (!merkmale) return;
     const landung = platzierte[index + 1]!;
-    const x1 = ruf.x + BOGEN_EINZUG;
+    const x1 = ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE);
     const x2 = landung.x - BOGEN_EINZUG;
     const y1 = ueberKopf(ruf);
     const y2 = ueberKopf(landung);
@@ -523,7 +555,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
       ),
     );
   }
-  legeBoegen(platzierte, linieY, glyphen);
+  legeBoegen(platzierte, glyphen);
 
   return inhaltX + breite;
 };
