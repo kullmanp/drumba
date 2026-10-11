@@ -1,9 +1,11 @@
 # Drumba
 
-A local-first web app for writing **Basler Trommeln** scores. See `CONTEXT.md` for the domain
+A local-first web app for writing **Basler Trommeln** scores. See `GLOSSARY.md` for the domain
 glossary and `docs/adr/` for architectural decisions.
 
 ## Code
+
+TypeScript + React + Vite, notation as inline SVG, no backend, Vitest.
 
 `npm run dev` opens the score, `npm test` runs Vitest, `npm run typecheck` runs `tsc`.
 
@@ -22,7 +24,7 @@ layout as coordinates, so it can be asserted on. What is left to the renderer is
 and the inner shape of a single mark: how far a Fahne falls, how far apart stacked Balken sit.
 If you find yourself computing an x in `src/render/`, it belongs in the layout.
 
-Identifiers use the `CONTEXT.md` vocabulary verbatim, umlauts included (`Fünferruf`, not
+Identifiers use the `GLOSSARY.md` vocabulary verbatim, umlauts included (`Fünferruf`, not
 `Fuenferruf`). Filenames stay ASCII, to keep git and macOS from disagreeing about
 normalisation.
 
@@ -38,4 +40,4 @@ The five canonical triage roles, each label string equal to its name. See `docs/
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.

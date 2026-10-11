@@ -65,7 +65,7 @@ hard-coded Marsch, and `npm test` proves the layout that produced it.
     so that sizing decisions are not baked into the geometry.
 21. As a developer, I want a Takt whose Schläge overrun its time signature to be a detectable
     error, so that bad data surfaces early rather than rendering silently wrong.
-22. As a developer, I want the vocabulary from `CONTEXT.md` used verbatim in type and function
+22. As a developer, I want the vocabulary from `GLOSSARY.md` used verbatim in type and function
     names, so that the code and the glossary never drift apart.
 
 ## Implementation Decisions
@@ -91,7 +91,7 @@ choice was made explicitly over testing at the component boundary: notation is a
 problem, and asserting "the Schlepp's grace note sits N units left of its main stem" as data is
 far more precise and durable than digging it out of SVG attributes.
 
-**Model shape.** Follows `CONTEXT.md` and ADR-0001:
+**Model shape.** Follows `GLOSSARY.md` and ADR-0001:
 
 - A `Marsch` has a title and an ordered list of `Vers`.
 - A `Vers` has a time signature (arbitrary numerator/denominator — 6/8 and 2/4 dominate but 5/8
@@ -169,7 +169,7 @@ precision. This iteration builds the model and the Zündstoff renderer only; Hie
 later be a lossy view over the same model, never an independent document. Nothing in this
 iteration may make the model less precise than Zündstoff requires.
 
-`CONTEXT.md` is the vocabulary authority. Use `Marsch`, `Vers`, `Takt`, `Schlag`, `Figur`,
+`GLOSSARY.md` is the vocabulary authority. Use `Marsch`, `Vers`, `Takt`, `Schlag`, `Figur`,
 `Hand`, `Dupfe`, `Schlepp`, `Fünferruf` verbatim in identifiers. Avoid the synonyms the
 glossary rejects (`Stück`, `Teil`, "score", "note", "stroke", "section"). If a needed concept
 is missing from the glossary, that is a signal to add it there, not to invent a term in code.
@@ -184,7 +184,7 @@ geometry, not restructuring the model.
 ## Comments
 
 **Closed 2026-10-11.** Built across `234fe87`, `ff09d25` and `8d27bcf`. Where the result departs
-from the spec above, the spec was wrong about the notation, and `CONTEXT.md` now holds the
+from the spec above, the spec was wrong about the notation, and `GLOSSARY.md` now holds the
 corrected terms:
 
 - **Notenköpfe, not matchsticks.** Checked against real scores (ZicZac, Colonel Bogey March),

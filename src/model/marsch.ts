@@ -18,7 +18,7 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * (siehe Layout) die Geometrie ergänzen.
  *
  * Die Ruf-Familie fehlt bewusst: wie ein Wirbel geschrieben wird, ist noch
- * nicht geklärt (siehe `CONTEXT.md`), und eine Figur, die wir nicht zeichnen
+ * nicht geklärt (siehe `GLOSSARY.md`), und eine Figur, die wir nicht zeichnen
  * können, soll das Modell nicht behaupten.
  */
 export type Figur = "Dupfe" | "Schlepp";

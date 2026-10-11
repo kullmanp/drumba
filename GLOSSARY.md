@@ -7,16 +7,6 @@ This file is a glossary of domain terms only. It is not a spec and holds no impl
 detail. Terms are Baseldytsch / German where the tradition has a word for the thing; invented
 English translations are avoided.
 
-## Status
-
-Domain model under active design. The **first slice** is deliberately minimal: build one
-Marsch in memory and render it as Zündstoffnoten. In scope for the slice: Marsch, Vers, Takt,
-Schlag, Figur (Dupfe / Schlepp), Hand, notated value. Deferred (terms kept here for
-orientation, not built yet): the Ruf family, dynamics, Pause, Auftakt, Schluss, Tempo,
-Vortrag, Hieroglyphen rendering + import, playback, library/persistence, Pfeife.
-
-Stack: TypeScript + React + Vite, notation as inline SVG, no backend, Vitest.
-
 ## Language
 
 ### The tradition
