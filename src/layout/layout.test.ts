@@ -1324,17 +1324,24 @@ describe("Fuenferruf ohne Schlepp", () => {
     ).toEqual([1]);
   });
 
-  it("schlaegt den Bogen ueber der Linie zur Landung und schreibt die 5 darunter", () => {
+  it("schlaegt den Bogen flach ueber der Linie zur Landung und schreibt die 5 unter die Linie", () => {
     const landung = glyphen(zicZac, "notenkopf")[2]!;
     const [bogen, ...weitere] = glyphen(zicZac, "bogen");
     const [zahl] = glyphen(zicZac, "rufZahl");
 
     expect(weitere).toEqual([]);
     expect(Math.abs(bogen!.x2 - landung.x)).toBeLessThanOrEqual(landung.breite / 2);
-    // Die Landung liegt links, unter der Linie; der Bogen endet trotzdem ueber ihr.
-    expect(bogen!.y2).toBeLessThan(glyphen(zicZac, "notenlinie")[0]!.y);
+    const linie = glyphen(zicZac, "notenlinie")[0]!;
+    // Ruf und Landung liegen links, unter der Linie: der Bogen liegt flach knapp
+    // ueber ihr, die Zahl unter ihr.
+    expect(bogen!.y1).toBeLessThan(linie.y);
+    expect(bogen!.y2).toBeLessThan(linie.y);
+    expect(bogen!.scheitelY).toBeLessThan(Math.min(bogen!.y1, bogen!.y2));
+    expect(Math.min(bogen!.y1, bogen!.y2) - bogen!.scheitelY).toBeLessThan(
+      linie.y - Math.max(bogen!.y1, bogen!.y2),
+    );
     expect(zahl!.text).toBe("5");
-    expect(zahl!.y).toBeGreaterThan(bogen!.scheitelY);
+    expect(zahl!.y).toBeGreaterThan(linie.y);
   });
 });
 

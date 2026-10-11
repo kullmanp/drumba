@@ -157,3 +157,6 @@ Loose ends:
 stands under its Bogen, not above it; a free Ruf's Hals is now a fixed length from its head
 (about two thirds of a full Hals), so under a links head it reaches nearly to the Balken, as in
 ZicZac Vers 1, Takte 4 and 7.
+When Ruf and Landung are both links, the Bogen now lies flat just above the Notenlinie and the
+number under it, between the heads (ZicZac Vers 1, Takt 7). Still cramped: the Ruf stands only a
+Sechzehntel before its Landung.

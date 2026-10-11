@@ -122,6 +122,13 @@ const BOGEN_HOEHE = 8;
  */
 const BOGEN_UEBER_LINIE = 3;
 /**
+ * Liegen Ruf und Landung beide links, unter der Linie, liegt der Bogen flach
+ * knapp ueber ihr und die Zahl unter ihr, zwischen den Koepfen. Nach Augenmass
+ * an ZicZac, Vers 1, Takt 7.
+ */
+const FLACHER_BOGEN_HOEHE = 1.5;
+const ZAHL_UNTER_LINIE = 3.5;
+/**
  * Luft zwischen dem Scheitel des Bogens und der Oberkante der Ruf-Zahl: sie
  * steht unter dem Bogen, nicht darueber, wie in ZicZac.
  */
@@ -278,7 +285,10 @@ export type Glyph =
       readonly typ: "rufZahl";
       /** Die Mitte der Zahl, unter dem Bogen. */
       readonly x: number;
-      /** Die Oberkante der Zahl, knapp unter dem Scheitel des Bogens. */
+      /**
+       * Die Oberkante der Zahl, knapp unter dem Scheitel des Bogens — oder unter
+       * der Notenlinie, wenn Ruf und Landung beide links liegen.
+       */
       readonly y: number;
       readonly text: string;
     }
@@ -810,12 +820,13 @@ const legeBoegen = (
           : { x1: ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE), y1: ueberKopf(ruf) };
       const x2 = landung.x - BOGEN_EINZUG;
       const y2 = landung.kopfY > linieY ? linieY - BOGEN_UEBER_LINIE : ueberKopf(landung);
-      const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
+      const beideLinks = ruf.kopfY > linieY && landung.kopfY > linieY;
+      const scheitelY = Math.min(y1, y2) - (beideLinks ? FLACHER_BOGEN_HOEHE : BOGEN_HOEHE);
       glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
       glyphen.push({
         typ: "rufZahl",
         x: (x1 + x2) / 2,
-        y: scheitelY + ZAHL_LUFT,
+        y: beideLinks ? linieY + ZAHL_UNTER_LINIE : scheitelY + ZAHL_LUFT,
         text: String(merkmale.schlaege),
       });
     });
