@@ -124,6 +124,9 @@ export type GlyphTyp = Glyph["typ"];
 /** Einfacher Strich oder Wiederholungsklammer. */
 export type Strichart = "einfach" | "wiederholungAnfang" | "wiederholungEnde";
 
+/** Wohin ein Balkenstummel vom Hals aus zeigt. */
+export type Richtung = "rechts" | "links";
+
 export interface Punkt {
   readonly x: number;
   readonly y: number;
@@ -209,9 +212,19 @@ export type Glyph =
       readonly typ: "balken";
       readonly x1: number;
       readonly x2: number;
+      /** An den Halsenden; hoehere Ebenen stapelt der Renderer darueber. */
       readonly y: number;
-      /** Wie viele Balkenlinien durchgehen. */
-      readonly anzahl: number;
+      /** Die wievielte Balkenlinie: 1 fuer die Achtel, 2 fuer die Sechzehntel, … */
+      readonly ebene: number;
+    }
+  | {
+      readonly typ: "balkenstummel";
+      /** Am Hals, an dem der Stummel haengt; seine Laenge waehlt der Renderer. */
+      readonly x: number;
+      readonly y: number;
+      readonly ebene: number;
+      /** In die Gruppe hinein: am ersten Schlag nach rechts, sonst nach links. */
+      readonly richtung: Richtung;
     }
   | { readonly typ: "versNummer"; readonly x: number; readonly y: number; readonly nummer: number }
   | {
@@ -221,28 +234,6 @@ export type Glyph =
       readonly zaehler: number;
       readonly nenner: number;
     };
-
-/**
- * Eine Balkengruppe aus ungleich langen Schlaegen. Eine punktierte Achtel neben
- * einer Sechzehntel braeuchte einen Balkenstummel am einzelnen Hals; den bauen
- * wir noch nicht. Bis dahin wird lieber geworfen als falsch gezeichnet: mit
- * nur den durchgehenden Balken saehe die Sechzehntel wie eine Achtel aus, und
- * ein falscher Rhythmus faellt niemandem auf.
- */
-export class UngleicheBalkengruppeError extends Error {
-  constructor(
-    readonly versNummer: number,
-    readonly taktNummer: number,
-    werte: readonly Bruch[],
-  ) {
-    const gelistet = werte.map((w) => `${w.zaehler}/${w.nenner}`).join(", ");
-    super(
-      `Vers ${versNummer}, Takt ${taktNummer}: Balkengruppe aus ungleichen ` +
-        `Werten (${gelistet}) — Balkenstummel sind noch nicht gebaut`,
-    );
-    this.name = "UngleicheBalkengruppeError";
-  }
-}
 
 export interface Layout {
   readonly breite: number;
@@ -394,13 +385,56 @@ const balkenGruppen = (
   return gruppen;
 };
 
+/**
+ * Die Balken einer Gruppe, Ebene um Ebene. Die erste spannt die ganze Gruppe;
+ * jede weitere spannt jeden Lauf aufeinanderfolgender Schlaege, die so kurz
+ * sind, dass sie sie brauchen — die Sechzehntel neben einer Achtel bekommen
+ * ihren zweiten Balken unter sich, die Achtel nicht. Ein Lauf aus einem
+ * einzigen Schlag bekommt statt eines Balkens einen Stummel, der in die Gruppe
+ * hineinzeigt: vom ersten Schlag nach rechts, von jedem anderen nach links.
+ */
+const legeBalken = (
+  gruppe: readonly PlatzierterSchlag[],
+  balkenY: number,
+  glyphen: Glyph[],
+): void => {
+  const tiefsteEbene = Math.max(...gruppe.map((p) => fahnenAnzahl(p.schlag.wert)));
+  for (let ebene = 1; ebene <= tiefsteEbene; ebene++) {
+    let lauf: PlatzierterSchlag[] = [];
+    const schliesse = () => {
+      const [erster] = lauf;
+      if (lauf.length === 1) {
+        glyphen.push({
+          typ: "balkenstummel",
+          x: erster!.halsX,
+          y: balkenY,
+          ebene,
+          richtung: erster === gruppe[0] ? "rechts" : "links",
+        });
+      } else if (lauf.length > 1) {
+        glyphen.push({
+          typ: "balken",
+          x1: erster!.halsX,
+          x2: lauf.at(-1)!.halsX,
+          y: balkenY,
+          ebene,
+        });
+      }
+      lauf = [];
+    };
+    for (const platzierter of gruppe) {
+      if (fahnenAnzahl(platzierter.schlag.wert) >= ebene) lauf.push(platzierter);
+      else schliesse();
+    }
+    schliesse();
+  }
+};
+
 const legeTakt = (
   takt: Takt,
   taktX: number,
   linieY: number,
   versTaktart: Taktart,
-  versNummer: number,
-  taktNummer: number,
   glyphen: Glyph[],
 ): PlatzierterSchlag[] => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
@@ -422,17 +456,6 @@ const legeTakt = (
   });
   const gruppen = balkenGruppen(platzierte, versTaktart);
   const gebalkt = new Set(gruppen.flat());
-
-  for (const gruppe of gruppen) {
-    const balken = new Set(gruppe.map((p) => fahnenAnzahl(p.schlag.wert)));
-    if (balken.size > 1) {
-      throw new UngleicheBalkengruppeError(
-        versNummer,
-        taktNummer,
-        gruppe.map((p) => p.schlag.wert),
-      );
-    }
-  }
 
   for (const platzierter of platzierte) {
     const { schlag, x, halsX, kopfY, halsEnde } = platzierter;
@@ -483,15 +506,7 @@ const legeTakt = (
     }
   }
 
-  for (const gruppe of gruppen) {
-    glyphen.push({
-      typ: "balken",
-      x1: gruppe[0]!.halsX,
-      x2: gruppe.at(-1)!.halsX,
-      y: balkenY,
-      anzahl: fahnenAnzahl(gruppe[0]!.schlag.wert),
-    });
-  }
+  for (const gruppe of gruppen) legeBalken(gruppe, balkenY, glyphen);
 
   return platzierte;
 };
@@ -544,7 +559,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     glyphen.push(
       taktstrich(taktX, linieY, strichartFuer(index, strichAnzahl, vers.wiederholungen)),
     );
-    return legeTakt(takt, taktX, linieY, vers.taktart, nummer, index + 1, glyphen);
+    return legeTakt(takt, taktX, linieY, vers.taktart, glyphen);
   });
 
   if (vers.takte.length > 0) {

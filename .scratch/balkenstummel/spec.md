@@ -124,3 +124,13 @@ rather than on constants.
 `GLOSSARY.md` now holds **Balkengruppe** and **Balkenstummel**, and **Balken** describes the
 levels. The Zählzeit is the default group, and the author may regroup. The reference is
 `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`, Vers 1, first line.
+
+## Comments
+
+**2026-10-11, during implementation.** ZicZac Vers 1, Takt 9 was misread when writing this spec
+and is dropped from the Übungsmarsch. Its first Zählzeit is a rechts Achtel on the Zählzeit,
+then a small free Fünferruf links that leads into a links Sechzehntel, then a rechts
+Sechzehntel, beamed from the Achtel to the last Sechzehntel with the Ruf outside the Balken.
+The model's Fünferruf fills a whole Achtel before its Landung, so it cannot hold this yet; it
+is a question for the next grilling. A constructed layout test covers a Fünferruf on the
+Zählzeit beamed with Sechzehntel instead.

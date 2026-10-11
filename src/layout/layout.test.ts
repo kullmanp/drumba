@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { bruch } from "../model/bruch";
+import { addiere, bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
-import { layout, UngleicheBalkengruppeError } from "./layout";
+import { layout } from "./layout";
 
 // --- Halterungen -----------------------------------------------------------
 
@@ -28,6 +28,22 @@ const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Takt[]
 });
 
 const marsch = (titel: string, ...verse: Vers[]): Marsch => ({ titel, verse });
+
+/** Ein 2/4-Takt aus Dupfen der gegebenen Werte, ab Position 0 lueckenlos gereiht. */
+const reihe = (...werte: [number, number][]): Marsch => {
+  let position = bruch(0, 1);
+  const schlaege = werte.map((wert, i) => {
+    const s: Schlag = {
+      figur: "Dupfe",
+      hand: i % 2 === 0 ? "rechts" : "links",
+      position,
+      wert: bruch(...wert),
+    };
+    position = addiere(position, s.wert);
+    return s;
+  });
+  return marsch("Gemischt", vers([2, 4], 1, { schlaege }));
+};
 
 type GlyphVom<T extends GlyphTyp> = Extract<Glyph, { typ: T }>;
 
@@ -449,7 +465,7 @@ describe("Balken", () => {
   it("fasst die Sechzehntel eines 2/4-Taktes je Viertel zusammen", () => {
     const m = marsch("Acht Sechzehntel", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
     const haelse = glyphen(m, "hals");
-    const balken = glyphen(m, "balken");
+    const balken = glyphen(m, "balken").filter((b) => b.ebene === 1);
 
     expect(balken).toHaveLength(2);
     expect(balken[0]!.x2).toBeCloseTo(haelse[3]!.x, 10);
@@ -640,46 +656,101 @@ describe("Fahne", () => {
 describe("Balkenzahl", () => {
   it("balkt Achtel einfach", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 1, dupfenTakt(6, [1, 8])));
-    expect(glyphen(m, "balken").map((b) => b.anzahl)).toEqual([1, 1]);
+    expect(glyphen(m, "balken").map((b) => b.ebene)).toEqual([1, 1]);
   });
 
-  it("balkt Sechzehntel doppelt", () => {
+  it("balkt Sechzehntel doppelt, beide Balken ueber die ganze Gruppe", () => {
     const m = marsch("Acht Sechzehntel", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
-    expect(glyphen(m, "balken").map((b) => b.anzahl)).toEqual([2, 2]);
+    const haelse = glyphen(m, "hals");
+    const balken = glyphen(m, "balken");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1, 2, 1, 2]);
+    balken.forEach((b, i) => {
+      const erster = i < 2 ? 0 : 4;
+      expect(b.x1).toBeCloseTo(haelse[erster]!.x, 10);
+      expect(b.x2).toBeCloseTo(haelse[erster + 3]!.x, 10);
+    });
   });
 });
 
 describe("Gemischte Balkengruppe", () => {
-  // Achtel und Sechzehntel unter einem Balken: die Sechzehntel braeuchte einen
-  // Balkenstummel. Den gibt es noch nicht, also wird geworfen statt gelogen.
-  const gemischt = marsch(
-    "Gemischt",
-    vers([2, 4], 1, dupfenTakt(4, [1, 8])),
-    vers([2, 4], 1, {
-      schlaege: [
-        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-        schlag("Dupfe", "links", [1, 8], [1, 16]),
-        schlag("Dupfe", "rechts", [3, 16], [1, 16]),
-        schlag("Dupfe", "links", [1, 4], [1, 4]),
-      ],
-    }),
-  );
+  it("spannt bei Achtel, Sechzehntel, Sechzehntel den zweiten Balken nur ueber die Sechzehntel", () => {
+    const m = reihe([1, 8], [1, 16], [1, 16], [1, 4]);
+    const haelse = glyphen(m, "hals");
+    const balken = glyphen(m, "balken");
 
-  it("zeichnet die Gruppe nicht still falsch, sondern wirft", () => {
-    expect(() => layout(gemischt)).toThrow(UngleicheBalkengruppeError);
+    expect(balken.map((b) => b.ebene)).toEqual([1, 2]);
+    expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(haelse[2]!.x, 10);
+    expect(balken[1]!.x1).toBeCloseTo(haelse[1]!.x, 10);
+    expect(balken[1]!.x2).toBeCloseTo(haelse[2]!.x, 10);
+    expect(glyphen(m, "balkenstummel")).toEqual([]);
   });
 
-  it("benennt Vers und Takt des Fehlers", () => {
-    expect(() => layout(gemischt)).toThrow(/Vers 2.*Takt 1/);
+  it("gibt bei Sechzehntel, Achtel, Sechzehntel beiden Sechzehnteln einen Stummel nach innen", () => {
+    const m = reihe([1, 16], [1, 8], [1, 16], [1, 4]);
+    const haelse = glyphen(m, "hals");
+    const balken = glyphen(m, "balken");
+    const stummel = glyphen(m, "balkenstummel");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1]);
+    expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(haelse[2]!.x, 10);
+    expect(stummel).toHaveLength(2);
+    expect(stummel[0]!.x).toBeCloseTo(haelse[0]!.x, 10);
+    expect(stummel[0]!.richtung).toBe("rechts");
+    expect(stummel[1]!.x).toBeCloseTo(haelse[2]!.x, 10);
+    expect(stummel[1]!.richtung).toBe("links");
+    expect(stummel.map((s) => s.ebene)).toEqual([2, 2]);
+    expect(stummel[0]!.y).toBeCloseTo(balken[0]!.y, 10);
   });
 
-  it("nennt die Werte, die nicht zusammenpassen", () => {
-    expect(() => layout(gemischt)).toThrow(/1\/8.*1\/16/);
+  it("gibt der Sechzehntel nach einer punktierten Achtel einen Stummel nach links", () => {
+    const m = reihe([3, 16], [1, 16], [1, 4]);
+    const haelse = glyphen(m, "hals");
+    const stummel = glyphen(m, "balkenstummel");
+
+    const balken = glyphen(m, "balken");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1]);
+    expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(haelse[1]!.x, 10);
+    expect(stummel).toHaveLength(1);
+    expect(stummel[0]!.x).toBeCloseTo(haelse[1]!.x, 10);
+    expect(stummel[0]!.ebene).toBe(2);
+    expect(stummel[0]!.richtung).toBe("links");
   });
 
-  it("laesst eine Gruppe aus gleichen Werten durch", () => {
-    const gleich = marsch("Gleich", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
-    expect(() => layout(gleich)).not.toThrow();
+  it("balkt einen Fuenferruf auf der Zaehlzeit mit den Sechzehnteln danach", () => {
+    const m = marsch(
+      "Ruf mit Sechzehnteln",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "rechts", [1, 8], [1, 16]),
+          schlag("Dupfe", "links", [3, 16], [1, 16]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 4]),
+        ],
+      }),
+    );
+    const haelse = glyphen(m, "hals");
+    const balken = glyphen(m, "balken");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1, 2]);
+    expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(haelse[2]!.x, 10);
+    expect(balken[1]!.x1).toBeCloseTo(haelse[1]!.x, 10);
+    expect(balken[1]!.x2).toBeCloseTo(haelse[2]!.x, 10);
+    expect(glyphen(m, "balkenstummel")).toEqual([]);
+    expect(glyphen(m, "wirbelstriche")[0]!.x).toBeCloseTo(haelse[0]!.x, 10);
+
+    const koepfe = glyphen(m, "notenkopf");
+    const [bogen, ...weitere] = glyphen(m, "bogen");
+    expect(weitere).toEqual([]);
+    expect(bogen!.x1).toBeGreaterThan(koepfe[0]!.x - koepfe[0]!.breite / 2);
+    expect(bogen!.x1).toBeLessThan(koepfe[0]!.x + koepfe[0]!.breite / 2);
+    expect(bogen!.x2).toBeGreaterThan(koepfe[1]!.x - koepfe[1]!.breite / 2);
+    expect(bogen!.x2).toBeLessThan(koepfe[1]!.x + koepfe[1]!.breite / 2);
   });
 });
 

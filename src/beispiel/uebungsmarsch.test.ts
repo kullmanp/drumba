@@ -41,8 +41,9 @@ describe("Uebungsmarsch", () => {
     expect(new Set(schlepps)).toEqual(new Set(["rechts", "links"]));
   });
 
-  it("haelt jede Balkengruppe gleichwertig — Balkenstummel gibt es noch nicht", () => {
-    expect(() => layout(uebungsmarsch)).not.toThrow();
+  it("zeigt Balkenstummel in beide Richtungen", () => {
+    const stummel = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "balkenstummel");
+    expect(new Set(stummel.map((s) => s.richtung))).toEqual(new Set(["rechts", "links"]));
   });
 
   it("hat einen wiederholten und einen einmal gespielten Vers", () => {

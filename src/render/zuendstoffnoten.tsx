@@ -38,6 +38,25 @@ const PUNKT_RADIUS = 1.5;
  */
 const BALKEN_STAERKE = 3.76;
 const BALKEN_LUECKE = 2.5;
+/**
+ * Wie weit ein Balkenstummel vom Hals in seine Gruppe reicht — etwa eine
+ * Kopfbreite, nach Augenmass an ZicZac.
+ */
+const STUMMEL_LAENGE = 7;
+/**
+ * Ein Balken der gegebenen Ebene zwischen zwei x, in beliebiger Reihenfolge.
+ * Ebene 1 liegt auf `y`; jede weitere stapelt sich darueber.
+ */
+const balkenRechteck = (xA: number, xB: number, y: number, ebene: number) => (
+  <rect
+    x={Math.min(xA, xB)}
+    y={y - BALKEN_STAERKE - (ebene - 1) * (BALKEN_STAERKE + BALKEN_LUECKE)}
+    width={Math.abs(xB - xA)}
+    height={BALKEN_STAERKE}
+    fill="currentColor"
+    stroke="none"
+  />
+);
 const FAHNE_BREITE = 7;
 /** Die Fahne haengt am unteren Halsende und schwingt nach rechts oben aus. */
 const FAHNE_STEIGUNG = 6;
@@ -207,21 +226,11 @@ const zeichne = (glyph: Glyph) => {
         <circle cx={glyph.x} cy={glyph.y} r={PUNKT_RADIUS} fill="currentColor" stroke="none" />
       );
     case "balken":
-      return (
-        <>
-          {Array.from({ length: glyph.anzahl }, (_, i) => (
-            <rect
-              key={i}
-              x={glyph.x1}
-              y={glyph.y - BALKEN_STAERKE - i * (BALKEN_STAERKE + BALKEN_LUECKE)}
-              width={glyph.x2 - glyph.x1}
-              height={BALKEN_STAERKE}
-              fill="currentColor"
-              stroke="none"
-            />
-          ))}
-        </>
-      );
+      return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
+    case "balkenstummel": {
+      const ende = glyph.x + (glyph.richtung === "rechts" ? STUMMEL_LAENGE : -STUMMEL_LAENGE);
+      return balkenRechteck(glyph.x, ende, glyph.y, glyph.ebene);
+    }
     case "fahne":
       return (
         <>

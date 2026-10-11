@@ -8,9 +8,8 @@ import { andereHand } from "../model/marsch";
  * Dupfe, Schlepp und Fuenferruf — auf beiden Haenden, in 6/8 und in 2/4. Ein
  * Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich.
  *
- * Die Balkengruppen sind bewusst durchweg gleichwertig: Balkenstummel fuer eine
- * gemischte Gruppe gibt es noch nicht, und das Layout wirft, statt sie falsch
- * zu zeichnen.
+ * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
+ * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1.
  */
 
 const schlag = (
@@ -76,6 +75,28 @@ export const uebungsmarsch: Marsch = {
       taktart: { zaehler: 2, nenner: 4 },
       wiederholungen: 1,
       takte: [
+        // ZicZac, Vers 1, Takt 1: Achtel, Sechzehntel, Sechzehntel | Sechzehntel,
+        // Achtel, Sechzehntel — der zweite Balken nur unter den Sechzehnteln,
+        // die einzelnen mit Stummeln nach innen.
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+            schlag("Schlepp", "links", [1, 8], [1, 16]),
+            schlag("Dupfe", "links", [3, 16], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 4], [1, 16]),
+            schlag("Dupfe", "links", [5, 16], [1, 8]),
+            schlag("Schlepp", "rechts", [7, 16], [1, 16]),
+          ],
+        },
+        // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [3, 16]),
+            schlag("Dupfe", "links", [3, 16], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 4], [3, 16]),
+            schlag("Dupfe", "links", [7, 16], [1, 16]),
+          ],
+        },
         // Acht Sechzehntel — eine Balkengruppe je Viertel.
         wechselnd(
           Array.from({ length: 8 }, () => "Dupfe" as Figur),
