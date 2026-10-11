@@ -67,8 +67,10 @@ group 3+2 or 2+3; that grouping is not modelled yet.
 How many times a Vers is played — 2 (repeated) or 1. Drawn as repeat barlines or plain ones.
 
 **Auftakt**:
-A pickup — Schläge before the first full Takt. When built, modelled as its own thing, not as
-a short first Takt.
+A pickup — Schläge before the first full Takt of a Vers. Its own thing, not a short first Takt:
+it is the tail end of a Takt in the Vers's Taktart, so its Schläge fall on that Takt's
+Zählzeiten. Drawn before the Vers's first Taktstrich. Many Verse open with one; a Ruf in the
+Auftakt lands on the first Takt.
 
 ### Rhythmic content
 
@@ -106,6 +108,12 @@ played faster than in 2/4. Practically always played starting rechts; the mirror
 starting links is rare and hard to play, but legitimate. Written as a Schlepp whose Hals
 carries a Wirbel, with a "5" and a slur to the fifth stroke.
 A **Fünferruf ohne Schlepp** (no Vorschlag on the first stroke) also exists; deferred.
+
+**Pause**:
+Notated silence — a value and a position in its Takt, like a Schlag but with no Figur and no
+Hand. Written out by the author, never inferred from a gap: a Takt is filled exactly by its
+Schläge and Pausen.
+_Avoid_: rest.
 
 ### Notation elements
 
