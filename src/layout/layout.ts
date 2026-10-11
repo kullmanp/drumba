@@ -34,6 +34,7 @@ const NOTENLINIE_ABSTAND = 40;
  * Kopfhoehe von 8 Einheiten wieder ausmultipliziert — die Schrift ist eine
  * Textschrift mit festen Vorschubbreiten und sagt darum nichts ueber den
  * waagrechten Abstand zweier Schlaege; der kommt weiter aus dem Rhythmus.
+ * Nachmessen: `python3 scripts/trommelfont.py l u`.
  *
  * Die Groesse des Kopfes steht hier und nicht im Renderer, weil sich fremde
  * Zeichen an seinen Raendern ausrichten: der Vorschlag ueber seiner Oberkante,

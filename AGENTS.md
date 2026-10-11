@@ -27,7 +27,8 @@ renderer decides how thick and how tall it is.** Anything positioned along the s
 Vorschlag's offset, a Wirbel's span, the second stroke and the dots of a repeat Taktstrich —
 is emitted by the layout as coordinates, so it can be asserted on. What is left to the renderer
 is stroke weight and the inner shape of a single mark: how far a Fahne falls, how far apart
-stacked Balken sit.
+stacked Balken sit, where a curve's control points lie between the ends and the highest point
+the layout gives.
 If you find yourself computing an x in `src/render/`, it belongs in the layout.
 
 ## Agent skills

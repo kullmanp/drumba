@@ -23,6 +23,9 @@ Prettier, umlauts in code), not here. Module boundaries are in `AGENTS.md`.
 - **Bad data throws.** A Takt that overruns its Taktart, or anything else the model cannot
   honestly draw or play, raises a named error that says where (Vers, Takt) — it is never
   silently drawn or played.
+- **Figure traits in one table.** What a Figur has (Vorschlag, Ruf, stroke count) lives in
+  `FIGURMERKMALE`. Compare a Figur by name only where behaviour belongs to that one figure,
+  such as a Ruf's stroke pattern in playback.
 
 ## Tests
 
