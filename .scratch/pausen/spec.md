@@ -1,6 +1,6 @@
 # Pausen
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -94,3 +94,24 @@ open model question.
 Decided in the 2026-10-11 grilling for the AFK session. Reference:
 `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf` (render with `qlmanage`, see the
 project memory).
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `7ff0536`, built in `15f199c` (Pause in the model) and
+`33b58ad` (drawing Pausen). It looks right. Notes beyond the spec:
+
+- The layout never checked Schlag values, so only Pausen got the new `UnzeichenbarePauseError`.
+- `pruefeMarsch` checks every Takt for overrun and gaps before any Ruf check; older tests spell
+  out their Pausen.
+- The Übungsmarsch gained ZicZac Vers 1, Takt 2 and closing Viertelpausen in both Verse.
+
+Loose ends:
+
+- ZicZac Vers 1, Takt 2: the flagged line above each Achtel is unnamed; Drumba writes plain
+  Dupfen.
+- Every Pause sits at one height; ZicZac's Viertelpause sits a little higher. Per-Pausenart
+  heights if it should match.
+- Balken over a Pause in the middle of a Zählzeit and the Punkt of a dotted Pause have no
+  original to confirm them. The rests' shapes are by eye.
+- `GLOSSARY.md` **Punkt** does not cover a Pause's Punkt.
+- The model accepts a `wert` of 0 or below, and a Vers without Takte.

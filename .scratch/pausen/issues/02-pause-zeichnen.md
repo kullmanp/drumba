@@ -1,6 +1,6 @@
 # 02 — Draw Pausen, and put them into the Übungsmarsch
 
-Status: ready-for-human
+Status: done
 Type: task
 Blocked by: 01
 
@@ -53,3 +53,5 @@ Departures and things to look at:
 Loose ends: `GLOSSARY.md` **Punkt** still says only "right of the Notenkopf, at the head's own
 height". A Pause's Punkt is placed differently. Not edited, per the AFK rules. The rests' inner
 shapes are by eye: no font source exists.
+
+**2026-10-11.** Checked by the user: done.

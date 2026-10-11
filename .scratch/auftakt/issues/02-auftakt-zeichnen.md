@@ -1,6 +1,6 @@
 # 02 — Draw the Auftakt, and put it into the Übungsmarsch
 
-Status: ready-for-human
+Status: done
 Type: task
 Blocked by: 01
 
@@ -38,3 +38,5 @@ Differences from ZicZac, as the spec wants or out of scope: ZicZac draws no open
 (Drumba keeps its own, after the Auftakt). ZicZac sets the "5" beside the free Ruf rather than
 over the middle of the Bogen. That is the existing Wirbel layout, not touched here.
 Playback still ignores the Auftakt until issue 03. No departure from the spec.
+
+**2026-10-11.** Checked by the user: done.

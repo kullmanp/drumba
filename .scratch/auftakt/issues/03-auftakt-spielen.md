@@ -1,6 +1,6 @@
 # 03 — Play the Auftakt, and again before every return to Takt 1
 
-Status: ready-for-human
+Status: done
 Type: task
 Blocked by: 02
 
@@ -34,3 +34,5 @@ What to listen for in `npm run dev` (Play):
   on Takt 1. The "Marsch begins with the Auftakt" case is covered by tests only.
 - The 6/8 Vers now also repeats its new closing Takt (punktierte Viertel, Achtel,
   Viertelpause).
+
+**2026-10-11.** Checked by the user: done.

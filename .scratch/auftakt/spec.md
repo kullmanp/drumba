@@ -1,6 +1,6 @@
 # Auftakt
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -118,3 +118,18 @@ Marsch-level Auftakt distinct from the first Vers's.
 Decided in the 2026-10-11 grilling for the AFK session; ADR-0003 records why the Auftakt is the
 tail end of a Takt. ZicZac draws no opening repeat sign at all; Drumba keeps its own and places
 it after the Auftakt.
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `7ff0536` with ADR-0003, built in `1e96210` (model),
+`ffacb7f` (drawing) and `07eadef` (playback). It looks and sounds right. Notes beyond the spec:
+
+- The 2/4 Vers of the Übungsmarsch is played twice and opens with a free Fünferruf; both Verse
+  end on a Viertelpause it replays over.
+- The Übungsmarsch opens with a Vers without Auftakt, so "the Marsch begins with the Auftakt" is
+  covered by tests only.
+
+Loose ends:
+
+- An Auftakt after an empty Vers is checked against nothing.
+- ZicZac sets the Ruf's "5" beside the free Ruf; Drumba sets it over the middle of the Bogen.

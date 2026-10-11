@@ -1,6 +1,6 @@
 # Aufräumen — loose ends before Pausen and Auftakt
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -38,3 +38,19 @@ No visible change: `npm run dev` looks exactly as before.
 ## Out of Scope
 
 Anything visible. Pausen and the Auftakt (`.scratch/pausen/`, `.scratch/auftakt/`).
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `7ff0536`, built in `f557642` (Balkenstummel in the layout)
+and `ee56e96` (Landung through the model). The page renders byte-identical to before. Notes
+beyond the spec:
+
+- The `balkenstummel` glyph now carries both ends (`x1` at the Hals, `x2` into the group); the
+  `Richtung` type is gone and `STUMMEL_LAENGE` lives in the layout.
+- Placed Schläge are keyed by (Takt index, Schlag index), not by the `Schlag` object, so a Takt
+  object reused for a repeated Takt still finds its own Landung.
+
+Loose ends:
+
+- A Balkenstummel stays inside its group only while neighbouring Hälse are at least 7 units
+  apart; the layout does not clamp it.
