@@ -11,6 +11,9 @@ TypeScript + React + Vite, notation as inline SVG, no backend, Vitest.
 pre-commit hook runs it too; `npm run format` fixes formatting. Naming, testing and error rules
 are in `CODING_STANDARDS.md`.
 
+To compare with an original score or a screenshot, use `scripts/ausschnitt.sh` (usage in its
+header): read its small overview to find the Takt, then a crop of just that Takt.
+
 Four modules, in dependency order — each layer knows nothing of the one above it:
 
 - `src/model/` — the canonical model (ADR-0001) and exact fraction arithmetic. No geometry.
