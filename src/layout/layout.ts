@@ -1,7 +1,16 @@
 import type { Bruch } from "../model/bruch";
-import { alsZahl, bruch, dividiere, vergleiche } from "../model/bruch";
+import { alsZahl, bruch, dividiere, subtrahiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Pause, Schlag, Takt, Taktart, Vers } from "../model/marsch";
-import { FIGURMERKMALE, folgeschlag, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
+import {
+  AUFTAKT,
+  auftaktBeginn,
+  FIGURMERKMALE,
+  folgeschlag,
+  ort,
+  pruefeMarsch,
+  taktLaenge,
+  zaehlzeit,
+} from "../model/marsch";
 
 /**
  * Das Zuendstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
@@ -272,11 +281,12 @@ export type Glyph =
 export class UnzeichenbarePauseError extends Error {
   constructor(
     readonly versNummer: number,
+    /** Ab 1 gezaehlt; 0 ist der Auftakt. */
     readonly taktNummer: number,
     readonly pause: Pause,
   ) {
     super(
-      `Vers ${versNummer}, Takt ${taktNummer}: Pause auf ` +
+      `${ort(versNummer, taktNummer)}: Pause auf ` +
         `${pause.position.zaehler}/${pause.position.nenner} mit Wert ` +
         `${pause.wert.zaehler}/${pause.wert.nenner} kann noch nicht gezeichnet werden`,
     );
@@ -609,21 +619,26 @@ const legeTakt = (
  * Zeile, also bricht kein Bogen um.
  *
  * `platzierte` haelt die platzierten Schlaege je Takt, in der Reihenfolge des
- * Modells, damit die Landung des Modells ihren platzierten Schlag findet.
+ * Modells, damit die Landung des Modells ihren platzierten Schlag findet; der
+ * Auftakt hat seinen Platz daneben, denn sein Taktindex `AUFTAKT` ist kein
+ * Index in eine Liste. Ein Ruf im Auftakt zieht seinen Bogen so nach Takt 1.
  */
 const legeBoegen = (
   vers: Vers,
+  platzierterAuftakt: readonly PlatzierterSchlag[],
   platzierte: readonly (readonly PlatzierterSchlag[])[],
   glyphen: Glyph[],
 ): void => {
   const ueberKopf = (p: PlatzierterSchlag): number => p.kopfY - p.kopfHoehe / 2 - BOGEN_LUFT;
+  const platzierterTakt = (taktIndex: number): readonly PlatzierterSchlag[] =>
+    taktIndex === AUFTAKT ? platzierterAuftakt : platzierte[taktIndex]!;
 
-  platzierte.forEach((takt, taktIndex) => {
-    takt.forEach((ruf, index) => {
+  [AUFTAKT, ...platzierte.keys()].forEach((taktIndex) => {
+    platzierterTakt(taktIndex).forEach((ruf, index) => {
       const merkmale = FIGURMERKMALE[ruf.schlag.figur].ruf;
       if (!merkmale) return;
       const ziel = folgeschlag(vers, taktIndex, index)!;
-      const landung = platzierte[ziel.taktIndex]![ziel.index]!;
+      const landung = platzierterTakt(ziel.taktIndex)[ziel.index]!;
       const x1 = ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE);
       const x2 = landung.x - BOGEN_EINZUG;
       const y1 = ueberKopf(ruf);
@@ -640,8 +655,21 @@ const legeBoegen = (
   });
 };
 
+/**
+ * Die Breite des Auftakts: wie ein Takt sein Innenabstand und dann seine Laenge
+ * auf der Zeitachse, von seinem ersten Schlag bis zum Taktende. 0 ohne Auftakt.
+ */
+const auftaktBreite = (vers: Vers): number =>
+  vers.auftakt
+    ? TAKT_INNENABSTAND +
+      alsZahl(subtrahiere(taktLaenge(vers.taktart), auftaktBeginn(vers.auftakt))) *
+        EINHEITEN_PRO_GANZE
+    : 0;
+
 const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]): number => {
-  const inhaltX = RAND + VERS_KOPF_BREITE;
+  // Die Notenlinie beginnt am Auftakt; der erste Taktstrich steht nach ihm.
+  const linieX = RAND + VERS_KOPF_BREITE;
+  const inhaltX = linieX + auftaktBreite(vers);
   const breite = vers.takte.length * taktBreite(vers.taktart);
 
   glyphen.push({ typ: "versNummer", x: RAND, y: linieY, nummer });
@@ -652,7 +680,23 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     zaehler: vers.taktart.zaehler,
     nenner: vers.taktart.nenner,
   });
-  glyphen.push({ typ: "notenlinie", x1: inhaltX, x2: inhaltX + breite, y: linieY });
+  glyphen.push({ typ: "notenlinie", x1: linieX, x2: inhaltX + breite, y: linieY });
+
+  // Der Auftakt ist das Ende eines vollen Taktes (ADR-0003). Er wird gesetzt wie
+  // ein Takt, der so weit links beginnt, dass sein erster Schlag gleich nach dem
+  // Innenabstand steht — so gelten Zaehlzeit, Balken und freier Ruf unveraendert.
+  // Ein Taktstrich steht vor ihm nicht.
+  const platzierterAuftakt = vers.auftakt
+    ? legeTakt(
+        vers.auftakt,
+        linieX - alsZahl(auftaktBeginn(vers.auftakt)) * EINHEITEN_PRO_GANZE,
+        linieY,
+        vers.taktart,
+        nummer,
+        0,
+        glyphen,
+      )
+    : [];
 
   const strichAnzahl = vers.takte.length + 1;
   const platzierte = vers.takte.map((takt, index) => {
@@ -672,7 +716,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
       ),
     );
   }
-  legeBoegen(vers, platzierte, glyphen);
+  legeBoegen(vers, platzierterAuftakt, platzierte, glyphen);
 
   return inhaltX + breite;
 };

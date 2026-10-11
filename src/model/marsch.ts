@@ -233,7 +233,7 @@ export const zaehlzeit = (taktart: Taktart): Bruch =>
   istZusammengesetzt(taktart) ? bruch(3, taktart.nenner) : bruch(1, taktart.nenner);
 
 /** Wo im Marsch etwas steht, fuer Fehlermeldungen: Takt 0 ist der Auftakt. */
-const ort = (versNummer: number, taktNummer: number): string =>
+export const ort = (versNummer: number, taktNummer: number): string =>
   taktNummer === 0 ? `Vers ${versNummer}, Auftakt` : `Vers ${versNummer}, Takt ${taktNummer}`;
 
 /**

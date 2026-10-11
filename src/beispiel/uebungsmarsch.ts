@@ -6,12 +6,14 @@ import { andereHand } from "../model/marsch";
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
  * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
  * Dupfe, Schlepp und Fuenferruf — auf beiden Haenden, in 6/8 und in 2/4. Ein
- * Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich.
+ * Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich und einer aus
+ * dem Auftakt in Takt 1.
  *
  * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
  * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt
  * Pausen: eine Achtelpause wie in ZicZac, Vers 1, Takt 2, und am Ende eine
- * Viertelpause.
+ * Viertelpause. Er beginnt mit dem Auftakt aus ZicZac, Vers 1, der bei der
+ * Wiederholung und am Ende des 6/8-Verses ueber eine Pause wiederkehrt.
  */
 
 const schlag = (
@@ -80,11 +82,23 @@ export const uebungsmarsch: Marsch = {
           ],
           pausen: [],
         },
+        // Punktierte Viertel, Achtel, Viertelpause: der Vers endet auf einer Pause,
+        // ueber die der Auftakt des naechsten Verses faellt.
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [3, 8]),
+            schlag("Dupfe", "links", [3, 8], [1, 8]),
+          ],
+          pausen: [pause([1, 2], [1, 4])],
+        },
       ],
     },
     {
       taktart: { zaehler: 2, nenner: 4 },
-      wiederholungen: 1,
+      wiederholungen: 2,
+      // ZicZac, Vers 1: ein freier Fuenferruf auf der letzten Achtel vor dem
+      // ersten Taktstrich, der auf Takt 1 landet.
+      auftakt: { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])], pausen: [] },
       takte: [
         // ZicZac, Vers 1, Takt 1: Achtel, Sechzehntel, Sechzehntel | Sechzehntel,
         // Achtel, Sechzehntel — der zweite Balken nur unter den Sechzehnteln,

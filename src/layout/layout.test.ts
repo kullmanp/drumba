@@ -41,6 +41,14 @@ const pause = (position: [number, number], wert: [number, number]): Pause => ({
   wert: bruch(...wert),
 });
 
+/** Ein Vers mit Auftakt vor seinen Takten. */
+const mitAuftakt = (
+  taktart: [number, number],
+  wiederholungen: 1 | 2,
+  auftakt: Taktentwurf,
+  ...takte: Taktentwurf[]
+): Vers => ({ ...vers(taktart, wiederholungen, ...takte), auftakt: { pausen: [], ...auftakt } });
+
 /** Ein 2/4-Takt aus Dupfen der gegebenen Werte, ab Position 0 lueckenlos gereiht. */
 const reihe = (...werte: [number, number][]): Marsch => {
   let position = bruch(0, 1);
@@ -1077,5 +1085,151 @@ describe("Fuenferruf", () => {
 
     expect(balken.some((b) => b.x1 === rufHals.x)).toBe(true);
     expect(glyphen(imTakt, "notenkopf")[0]!.hoehe).toBe(glyphen(imTakt, "notenkopf")[1]!.hoehe);
+  });
+});
+
+describe("Auftakt", () => {
+  /** Viertel und Viertelpause: Platz, ueber den der Auftakt bei der Wiederholung faellt. */
+  const schluss: Taktentwurf = {
+    schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
+    pausen: [pause([1, 4], [1, 4])],
+  };
+  /** ZicZac, Vers 1: freier Fuenferruf auf der letzten Achtel, Landung auf Takt 1. */
+  const rufAuftakt = marsch(
+    "Ruf-Auftakt",
+    mitAuftakt(
+      [2, 4],
+      2,
+      { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])] },
+      dupfenTakt(4, [1, 8]),
+      schluss,
+    ),
+  );
+
+  it("setzt den Auftakt zwischen Taktart und ersten Taktstrich", () => {
+    const taktart = glyphen(rufAuftakt, "taktart")[0]!;
+    const linie = glyphen(rufAuftakt, "notenlinie")[0]!;
+    const erster = glyphen(rufAuftakt, "taktstrich")[0]!;
+    const koepfe = glyphen(rufAuftakt, "notenkopf");
+    const bogen = glyphen(rufAuftakt, "bogen")[0]!;
+    const vorDemStrich = layout(rufAuftakt).glyphen.filter(
+      (g): g is Extract<Glyph, { x: number }> =>
+        "x" in g && !["titel", "versNummer", "taktart"].includes(g.typ) && g.x < erster.x,
+    );
+
+    expect(new Set(vorDemStrich.map((g) => g.typ))).toEqual(
+      new Set(["hals", "notenkopf", "vorschlag", "wirbelstriche", "fahne", "rufZahl"]),
+    );
+    for (const g of [...vorDemStrich, { x: bogen.x1 }]) {
+      expect(g.x).toBeGreaterThan(taktart.x);
+      expect(g.x).toBeGreaterThanOrEqual(linie.x1);
+    }
+    for (const k of koepfe.slice(1)) expect(k.x).toBeGreaterThan(erster.x);
+  });
+
+  it("nennt den Auftakt, wenn eine Pause darin nicht gezeichnet werden kann", () => {
+    const m = marsch(
+      "Halbe Pause im Auftakt",
+      mitAuftakt(
+        [3, 4],
+        1,
+        {
+          schlaege: [schlag("Dupfe", "rechts", [1, 16], [3, 16])],
+          pausen: [pause([1, 4], [1, 2])],
+        },
+        { schlaege: [schlag("Dupfe", "rechts", [0, 1], [3, 4])] },
+      ),
+    );
+    expect(() => layout(m)).toThrow(UnzeichenbarePauseError);
+    expect(() => layout(m)).toThrow(/Vers 1, Auftakt/);
+  });
+
+  it("laesst die Notenlinie am Auftakt beginnen, ohne Taktstrich davor", () => {
+    const linie = glyphen(rufAuftakt, "notenlinie")[0]!;
+    const striche = glyphen(rufAuftakt, "taktstrich");
+    const kopf = glyphen(rufAuftakt, "notenkopf")[0]!;
+
+    expect(linie.x1).toBeLessThan(kopf.x);
+    expect(striche.every((s) => s.x > kopf.x)).toBe(true);
+  });
+
+  it("stellt das Wiederholungszeichen nach den Auftakt, an Takt 1", () => {
+    const [erster] = glyphen(rufAuftakt, "taktstrich");
+    expect(erster!.strichart).toBe("wiederholungAnfang");
+  });
+
+  it("macht den Auftakt so breit, wie er dauert", () => {
+    const sechzehntel = marsch(
+      "Kurz",
+      mitAuftakt([2, 4], 1, { schlaege: [schlag("Dupfe", "rechts", [7, 16], [1, 16])] }, schluss),
+    );
+    const achtel = marsch(
+      "Lang",
+      mitAuftakt([2, 4], 1, { schlaege: [schlag("Dupfe", "rechts", [3, 8], [1, 8])] }, schluss),
+    );
+    const strichX = (m: Marsch) => glyphen(m, "taktstrich")[0]!.x;
+    const [erste, zweite] = glyphen(
+      marsch("Zwei Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8]))),
+      "hals",
+    );
+
+    // Eine Sechzehntel mehr Auftakt schiebt den Taktstrich um eine halbe Achtel weiter.
+    expect(strichX(achtel) - strichX(sechzehntel)).toBeCloseTo((zweite!.x - erste!.x) / 2, 10);
+  });
+
+  it("zeichnet einen Fuenferruf im Auftakt frei: ungebalkt, kleiner, mit Fahne", () => {
+    const koepfe = glyphen(rufAuftakt, "notenkopf");
+    const erster = glyphen(rufAuftakt, "taktstrich")[0]!;
+    const balken = glyphen(rufAuftakt, "balken");
+
+    expect(koepfe[0]!.hoehe).toBeLessThan(koepfe[1]!.hoehe);
+    expect(balken.every((b) => b.x1 > erster.x)).toBe(true);
+    expect(glyphen(rufAuftakt, "fahne")[0]!.x).toBeLessThan(erster.x);
+  });
+
+  it("schlaegt den Bogen vom Ruf im Auftakt ueber den Taktstrich zum ersten Kopf in Takt 1", () => {
+    const koepfe = glyphen(rufAuftakt, "notenkopf");
+    const erster = glyphen(rufAuftakt, "taktstrich")[0]!;
+    const [bogen, ...weitere] = glyphen(rufAuftakt, "bogen");
+
+    expect(weitere).toEqual([]);
+    expect(bogen!.x1).toBeLessThan(erster.x);
+    expect(bogen!.x2).toBeGreaterThan(koepfe[1]!.x - koepfe[1]!.breite / 2);
+    expect(bogen!.x2).toBeLessThan(koepfe[1]!.x + koepfe[1]!.breite / 2);
+    expect(glyphen(rufAuftakt, "rufZahl")).toHaveLength(1);
+  });
+
+  it("balkt zwei Sechzehntel im Auftakt zusammen, mit zwei Balken (ZicZac, Vers 6)", () => {
+    const m = marsch(
+      "Sechzehntel-Auftakt",
+      mitAuftakt(
+        [2, 4],
+        1,
+        {
+          schlaege: [
+            schlag("Dupfe", "links", [3, 8], [1, 16]),
+            schlag("Dupfe", "links", [7, 16], [1, 16]),
+          ],
+        },
+        schluss,
+      ),
+    );
+    const haelse = glyphen(m, "hals");
+    const balken = glyphen(m, "balken");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1, 2]);
+    for (const b of balken) {
+      expect(b.x1).toBeCloseTo(haelse[0]!.x, 10);
+      expect(b.x2).toBeCloseTo(haelse[1]!.x, 10);
+    }
+  });
+
+  it("setzt in einem Vers ohne Auftakt den ersten Taktstrich an den Linienanfang", () => {
+    const ohne = marsch("Ohne", vers([2, 4], 2, dupfenTakt(4, [1, 8]), schluss));
+    const linie = glyphen(ohne, "notenlinie")[0]!;
+    const erster = glyphen(ohne, "taktstrich")[0]!;
+
+    expect(erster.x).toBeCloseTo(linie.x1, 10);
+    expect(erster.strichart).toBe("wiederholungAnfang");
   });
 });

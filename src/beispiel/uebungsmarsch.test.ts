@@ -47,8 +47,13 @@ describe("Uebungsmarsch", () => {
     expect(new Set(stummel.map((s) => Math.sign(s.x2 - s.x1)))).toEqual(new Set([1, -1]));
   });
 
-  it("hat einen wiederholten und einen einmal gespielten Vers", () => {
-    expect(uebungsmarsch.verse.map((v) => v.wiederholungen)).toEqual([2, 1]);
+  it("wiederholt beide Verse — der 2/4-Vers, damit sein Auftakt wiederkehrt", () => {
+    expect(uebungsmarsch.verse.map((v) => v.wiederholungen)).toEqual([2, 2]);
+  });
+
+  it("beginnt den 2/4-Vers mit einem Fuenferruf als Auftakt", () => {
+    const zweiViertel = uebungsmarsch.verse.find((v) => v.taktart.nenner === 4);
+    expect(zweiViertel?.auftakt?.schlaege.map((s) => s.figur)).toEqual(["Fuenferruf"]);
   });
 
   it("hat einen 6/8-Vers mit Balkengruppen", () => {
@@ -57,9 +62,9 @@ describe("Uebungsmarsch", () => {
     expect(layout(uebungsmarsch).glyphen.some((g) => g.typ === "balken")).toBe(true);
   });
 
-  it("zeigt eine Achtelpause und endet den 2/4-Vers auf einer Viertelpause", () => {
+  it("endet beide Verse auf einer Viertelpause und zeigt eine Achtelpause", () => {
     const pausen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "pause");
-    expect(pausen.map((p) => p.art)).toEqual(["Achtelpause", "Viertelpause"]);
+    expect(pausen.map((p) => p.art)).toEqual(["Viertelpause", "Achtelpause", "Viertelpause"]);
   });
 
   it("laesst sich spielen", () => {
