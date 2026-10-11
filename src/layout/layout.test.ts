@@ -118,12 +118,40 @@ describe("Schläge im Takt", () => {
     }
   });
 
-  it("führt jeden Hals bis an den Notenkopf seines Schlages", () => {
+  it("führt jeden Hals bis auf die Höhe seines Notenkopfes", () => {
     const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
     const haelse = glyphen(m, "hals");
     const koepfe = glyphen(m, "notenkopf");
 
-    expect(haelse.map((h) => [h.x, h.yOben])).toEqual(koepfe.map((k) => [k.x, k.y]));
+    expect(haelse.map((h) => h.yOben)).toEqual(koepfe.map((k) => k.y));
+  });
+
+  it("setzt den Hals an die linke Flanke des Kopfes, nicht durch dessen Mitte", () => {
+    const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
+    const haelse = glyphen(m, "hals");
+    const koepfe = glyphen(m, "notenkopf");
+
+    for (const [hals, kopf] of haelse.map((h, i) => [h, koepfe[i]!] as const)) {
+      const versatz = kopf.x - hals.x;
+      // Links der Mitte, aber innerhalb des Kopfes: er steht an dessen Rand.
+      expect(versatz).toBeGreaterThan(kopf.breite / 4);
+      expect(versatz).toBeLessThan(kopf.breite / 2);
+    }
+  });
+
+  it("hält den Kopf frei von der Notenlinie, statt sie zu berühren", () => {
+    const m = marsch("Zwei", vers([2, 4], 1, {
+      schlaege: [
+        schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+        schlag("Dupfe", "links", [1, 8], [1, 8]),
+      ],
+    }));
+    const linie = glyphen(m, "notenlinie")[0]!;
+
+    for (const kopf of glyphen(m, "notenkopf")) {
+      const spalt = Math.abs(kopf.y - linie.y) - kopf.hoehe / 2;
+      expect(spalt).toBeGreaterThan(0);
+    }
   });
 
   it("endet mit allen Hälsen eines Taktes gleich tief — sie teilen den Balken", () => {

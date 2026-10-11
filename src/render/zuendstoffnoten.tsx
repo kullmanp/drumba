@@ -13,25 +13,67 @@ import type { Marsch } from "../model/marsch";
 /**
  * Strichstärken und die innere Form einzelner Zeichen. Wo ein Zeichen steht,
  * sagt das Layout; wie dick und wie gross es ist, steht hier.
+ *
+ * Die Stärken sind am `2006Trommelfont` ausgemessen und auf die Kopfhöhe des
+ * Layouts umgerechnet. Sie sind viel feiner, als sie vorher waren: der Hals
+ * misst rund ein Zehntel der Kopfhöhe, nicht ein Viertel.
  */
-const HALS_STAERKE = 2.2;
-const VORSCHLAG_STAERKE = 2.2;
-const LINIEN_STAERKE = 1.2;
-const KLAMMER_STAERKE = 2.6;
-const KLAMMER_PUNKT = 1.8;
-/** Der Notenkopf. Sein Radius passt zum Abstand, den das Layout ihm zur Linie gibt. */
-const KOPF_RADIUS = 4;
+const HALS_STAERKE = 0.82;
+const LINIEN_STAERKE = 0.71;
+/** Noch ungeprüft: die Vorlage zeigt keinen Schlepp. Vorerst wie der Hals. */
+const VORSCHLAG_STAERKE = 0.82;
+const KLAMMER_STAERKE = 1.54;
+const KLAMMER_PUNKT = 1.06;
+/**
+ * Die Neigung des Notenkopfes. Der Kopf ist eine Ellipse, die nach rechts oben
+ * kippt — im Trommelfont deutlich steiler als im allgemeinen Notenstich, der
+ * bei rund 20° liegt. Das Achsenverhältnis der Ellipse steckt dagegen schon in
+ * der Hüllbox, die das Layout nennt; nur der Winkel gehört hierher.
+ */
+const KOPF_NEIGUNG = 33.4;
 const PUNKT_RADIUS = 1.5;
 /**
  * Die Balken hängen an den Halsenden und stapeln sich von dort nach *oben*,
  * zur Notenlinie hin — der unterste liegt auf der Höhe, die das Layout nennt.
  */
-const BALKEN_STAERKE = 4;
+const BALKEN_STAERKE = 3.76;
 const BALKEN_LUECKE = 2.5;
 const FAHNE_BREITE = 7;
 /** Die Fahne hängt am unteren Halsende und schwingt nach rechts oben aus. */
 const FAHNE_STEIGUNG = 6;
 const FAHNE_ABSTAND = 5;
+
+/**
+ * Die Halbachsen der Ellipse, die eine gegebene Hüllbox unter `KOPF_NEIGUNG`
+ * gerade ausfüllt. Aus w² = a²cos²θ + b²sin²θ und h² = a²sin²θ + b²cos²θ
+ * aufgelöst; der Renderer bekommt vom Layout nur die Box und leitet den Rest
+ * selbst ab, damit die Grösse an genau einer Stelle steht.
+ */
+const kopfAchsen = (breite: number, hoehe: number) => {
+  const bogen = (KOPF_NEIGUNG * Math.PI) / 180;
+  const c = Math.cos(bogen) ** 2;
+  const s = Math.sin(bogen) ** 2;
+  const w = (breite / 2) ** 2;
+  const h = (hoehe / 2) ** 2;
+  return { rx: Math.sqrt((w * c - h * s) / (c - s)), ry: Math.sqrt((h * c - w * s) / (c - s)) };
+};
+
+const Notenkopf = ({ glyph }: { glyph: Extract<Glyph, { typ: "notenkopf" }> }) => {
+  const { rx, ry } = kopfAchsen(glyph.breite, glyph.hoehe);
+  // Negativ, weil die y-Achse im SVG nach unten zeigt: der Kopf kippt nach
+  // rechts *oben*.
+  return (
+    <ellipse
+      cx={glyph.x}
+      cy={glyph.y}
+      rx={rx}
+      ry={ry}
+      transform={`rotate(${-KOPF_NEIGUNG} ${glyph.x} ${glyph.y})`}
+      fill="currentColor"
+      stroke="none"
+    />
+  );
+};
 
 const Taktstrich = ({ glyph }: { glyph: Extract<Glyph, { typ: "taktstrich" }> }) => (
   <>
@@ -83,9 +125,7 @@ const zeichne = (glyph: Glyph) => {
     case "taktstrich":
       return <Taktstrich glyph={glyph} />;
     case "notenkopf":
-      return (
-        <circle cx={glyph.x} cy={glyph.y} r={KOPF_RADIUS} fill="currentColor" stroke="none" />
-      );
+      return <Notenkopf glyph={glyph} />;
     case "hals":
       return (
         <line

@@ -25,25 +25,61 @@ const VERS_HOEHE = 96;
 /** Abstand der Notenlinie von der Oberkante des Vers-Blocks. */
 const NOTENLINIE_ABSTAND = 40;
 /**
- * Wie weit die Mitte eines Notenkopfes neben der Notenlinie liegt. Weil der
- * Kopf die Linie berührt statt über ihr zu schweben, ist dieser Abstand
- * zugleich sein Halbmesser — daran hängt, wo sein oberer Rand liegt.
+ * Die Masse des Notenkopfes und was sich an ihm ausrichtet.
+ *
+ * Ausgemessen am `2006Trommelfont`, der Schrift, in der der Schweizerische
+ * Tambouren- und Pfeiferverband seine eigenen Dokumente setzt: die Umrisse
+ * seiner Notenglyphen sind die Vorlage, nicht der allgemeine Notenstich. Die
+ * Zahlen dort sind auf die Kopfhöhe bezogen und hier mit einer frei gewählten
+ * Kopfhöhe von 8 Einheiten wieder ausmultipliziert — die Schrift ist eine
+ * Textschrift mit festen Vorschubbreiten und sagt darum nichts über den
+ * waagrechten Abstand zweier Schläge; der kommt weiter aus dem Rhythmus.
+ *
+ * Die Grösse des Kopfes steht hier und nicht im Renderer, weil sich fremde
+ * Zeichen an seinen Rändern ausrichten: der Vorschlag über seiner Oberkante,
+ * der Hals an seiner linken Flanke, der Punkt rechts neben ihm. Dem Renderer
+ * bleibt die Form — dass diese Hüllbox eine gekippte Ellipse füllt.
  */
-const KOPF_ABSTAND = 4;
+const KOPF_HOEHE = 8;
+const KOPF_BREITE = 9.19;
+/**
+ * Abstand der Kopfmitte von der Notenlinie. Der Kopf berührt die Linie nicht:
+ * zwischen Linienkante und Kopfunterkante bleibt eine gute halbe Kopfhöhe
+ * Luft. Erst dieser Abstand macht die Hand auf einen Blick lesbar — sie ist
+ * die einzige Bedeutung, die die Höhe eines Kopfes trägt.
+ */
+const KOPF_ABSTAND = 8.37;
+/**
+ * Wie weit links der Kopfmitte der Hals steht. Er läuft nicht durch die Mitte
+ * des Kopfes, sondern an seiner linken Flanke — bündig mit dessen linkem
+ * Rand, wie in der Vorlage.
+ */
+const HALS_VERSATZ = 4.02;
 /**
  * Wie tief die Halsenden unter der Notenlinie liegen — und damit die Balken.
  * Alle Hälse eines Taktes enden gleich tief, gleich auf welcher Seite der
  * Linie ihr Kopf steht; sonst träfen sie ihren gemeinsamen Balken nicht.
  */
-const HALS_TIEFE = 30;
+const HALS_TIEFE = 35.74;
 /** Luft zwischen Taktstrich und erstem Schlag des Taktes. */
 const TAKT_INNENABSTAND = 14;
-/** Wie weit ein Taktstrich über die Notenlinie ragt; unten endet er am Balken. */
-const TAKTSTRICH_UEBERSTAND = 13;
-/** Abstand der schweren zweiten Linie einer Wiederholungsklammer. */
-const KLAMMER_STRICH_ABSTAND = 5;
-/** Abstand der Klammerpunkte vom Taktstrich, waagrecht und von der Notenlinie aus. */
-const KLAMMER_PUNKT_ABSTAND = 5;
+/**
+ * Der halbe Taktstrich: er steht symmetrisch um die Notenlinie, gleich weit
+ * darüber wie darunter, und reicht weder an die Köpfe noch an die Balken.
+ *
+ * Auch das ist am `2006Trommelfont` ausgemessen. Der Taktstrich ist dort ein
+ * kurzer Strich quer über die Linie — er umschliesst die Noten nicht, sondern
+ * markiert nur die Stelle auf der Linie, an der der Takt wechselt.
+ */
+const TAKTSTRICH_HALBLAENGE = 8.71;
+/**
+ * Die Masse der Wiederholungsklammer. Für sie gibt es noch keine Vorlage: die
+ * Schrift hat Wiederholungszeichen, aber der ausgewertete Auszug enthält
+ * keines. Die Werte stehen darum nur im Verhältnis zum Taktstrich, bis ein
+ * echtes Muster sie ersetzt.
+ */
+const KLAMMER_STRICH_ABSTAND = 3;
+const KLAMMER_PUNKT_ABSTAND = 3;
 const KLAMMER_PUNKT_HOEHE = 5;
 /** Breite der Vers-Nummer und der Taktart links vor dem ersten Taktstrich. */
 const VERS_NUMMER_BREITE = 26;
@@ -97,6 +133,9 @@ export type Glyph =
       /** Über der Notenlinie für rechts, darunter für links. */
       readonly y: number;
       readonly hand: Hand;
+      /** Die Hüllmasse des Kopfes. Welche Form sie füllt, wählt der Renderer. */
+      readonly breite: number;
+      readonly hoehe: number;
     }
   | {
       readonly typ: "hals";
@@ -211,8 +250,8 @@ const taktstrich = (
   linieY: number,
   strichart: Strichart,
 ): Extract<Glyph, { typ: "taktstrich" }> => {
-  const yOben = linieY - TAKTSTRICH_UEBERSTAND;
-  const yUnten = linieY + HALS_TIEFE;
+  const yOben = linieY - TAKTSTRICH_HALBLAENGE;
+  const yUnten = linieY + TAKTSTRICH_HALBLAENGE;
   const innen = strichart === "wiederholungAnfang" ? 1 : -1;
 
   return {
@@ -238,7 +277,10 @@ const taktstrich = (
 /** Ein Schlag mit seiner Stelle auf der Zeitachse. */
 interface PlatzierterSchlag {
   readonly schlag: Schlag;
+  /** Die rhythmische Stelle. Der Notenkopf steht mittig darauf. */
   readonly x: number;
+  /** Wo der Hals steht — an der linken Flanke des Kopfes. */
+  readonly halsX: number;
 }
 
 /** Die Höhe des Notenkopfes: rechts über der Notenlinie, links darunter. */
@@ -323,10 +365,10 @@ const legeTakt = (
   glyphen: Glyph[],
 ): void => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
-  const platzierte = takt.schlaege.map((schlag) => ({
-    schlag,
-    x: inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE,
-  }));
+  const platzierte = takt.schlaege.map((schlag) => {
+    const x = inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE;
+    return { schlag, x, halsX: x - HALS_VERSATZ };
+  });
   const gruppen = balkenGruppen(platzierte, versTaktart);
   const gebalkt = new Set(gruppen.flat());
   const balkenY = linieY + HALS_TIEFE;
@@ -343,18 +385,25 @@ const legeTakt = (
   }
 
   for (const platzierter of platzierte) {
-    const { schlag, x } = platzierter;
+    const { schlag, x, halsX } = platzierter;
     const kopfY = kopfHoehe(schlag.hand, linieY);
 
-    glyphen.push({ typ: "hals", x, yOben: kopfY, yUnten: balkenY });
-    glyphen.push({ typ: "notenkopf", x, y: kopfY, hand: schlag.hand });
+    glyphen.push({ typ: "hals", x: halsX, yOben: kopfY, yUnten: balkenY });
+    glyphen.push({
+      typ: "notenkopf",
+      x,
+      y: kopfY,
+      hand: schlag.hand,
+      breite: KOPF_BREITE,
+      hoehe: KOPF_HOEHE,
+    });
 
     // Der Schlepp-Strich sitzt über dem Kopf, nicht neben ihm: er hängt am
     // Schlag und trägt darum keine eigene Handhöhe. Er beginnt am oberen Rand
     // des Kopfes, nicht in dessen Mitte — sonst steckte seine halbe Länge in
     // der Tinte des Kopfes und läse sich als durchgeschobener Hals.
     if (figurZeichnung[schlag.figur] === "mitVorschlag") {
-      const kopfRand = kopfY - KOPF_ABSTAND;
+      const kopfRand = kopfY - KOPF_HOEHE / 2;
       glyphen.push({
         typ: "vorschlag",
         x,
@@ -370,15 +419,15 @@ const legeTakt = (
     // einzelne Achtel wie eine Viertel.
     const fahnen = fahnenAnzahl(schlag.wert);
     if (fahnen > 0 && !gebalkt.has(platzierter)) {
-      glyphen.push({ typ: "fahne", x, y: balkenY, anzahl: fahnen });
+      glyphen.push({ typ: "fahne", x: halsX, y: balkenY, anzahl: fahnen });
     }
   }
 
   for (const gruppe of gruppen) {
     glyphen.push({
       typ: "balken",
-      x1: gruppe[0]!.x,
-      x2: gruppe.at(-1)!.x,
+      x1: gruppe[0]!.halsX,
+      x2: gruppe.at(-1)!.halsX,
       y: balkenY,
       anzahl: fahnenAnzahl(gruppe[0]!.schlag.wert),
     });

@@ -117,13 +117,15 @@ The single horizontal line a Vers's Takte sit on. Schläge are drawn against it,
 line runs *through* the notation rather than under it.
 
 **Notenkopf**:
-The filled round head that draws a Schlag. It sits at one of exactly two heights — just above
-the Notenlinie for a Schlag played **rechts**, just below it for **links**. The Notenkopf is
-where the Hand is written; there are no `r`/`l` letters in the notation.
+The filled oval head that draws a Schlag, tilted up to the right. It sits at one of exactly two
+heights — above the Notenlinie for a Schlag played **rechts**, below it for **links** — and
+stands clear of the line rather than touching it, so the two heights read apart at a glance.
+The Notenkopf is where the Hand is written; there are no `r`/`l` letters in the notation.
 
 **Hals**:
-The stem hanging from a Notenkopf. Always drawn **downward**, whichever side of the Notenlinie
-its Notenkopf sits on, so that every Hals of a group reaches the same Balken.
+The stem hanging from a Notenkopf, at the head's **left flank** rather than through its middle.
+Always drawn **downward**, whichever side of the Notenlinie its Notenkopf sits on, so that
+every Hals of a group reaches the same Balken.
 
 **Balken**:
 A beam joining the Hälse of Schläge that fall on the same Zählzeit. It runs **below** the
