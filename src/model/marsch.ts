@@ -213,8 +213,10 @@ export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | Pause | un
 
 const alsText = (b: Bruch): string => `${b.zaehler}/${b.nenner}`;
 
+const istSchlag = (element: Schlag | Pause): element is Schlag => "figur" in element;
+
 /** Wie ein Schlag oder eine Pause in einer Fehlermeldung heisst. */
-const benenne = (element: Schlag | Pause): string => ("figur" in element ? element.figur : "Pause");
+const benenne = (element: Schlag | Pause): string => (istSchlag(element) ? element.figur : "Pause");
 
 /**
  * Ein Takt, dessen Schlaege oder Pausen nicht in seine Taktart passen. Solche
@@ -246,19 +248,22 @@ export interface Fuellfehler {
 }
 
 /**
- * Wo die Schlaege und Pausen eines Taktes ab `beginn`, nach Position geordnet
- * und mit ihrer gespielten Dauer, die Strecke bis `ende` nicht genau fuellen.
- * `undefined`, wenn sie es tun. Der Beginn ist ein Parameter, weil nicht jeder
- * Takt bei 0 anfaengt und eine Tole mitten im Takt.
+ * Wo die gegebenen Schlaege und Pausen eines Taktes, nach Position geordnet und
+ * mit ihrer gespielten Dauer, die Strecke von `beginn` bis `ende` nicht genau
+ * fuellen. `undefined`, wenn sie es tun. Der Beginn ist ein Parameter, weil
+ * nicht jeder Takt bei 0 anfaengt und eine Tole mitten im Takt; was vor ihm
+ * steht, ist eine Ueberlappung.
  *
- * Gezaehlt wird nur, was ab `beginn` und vor `ende` steht. Was ueber `ende`
- * hinausragt, meldet sie nicht: das ist ein Ueberlauf, und `taktUeberlauf`
- * muss vorher gelaufen sein.
+ * Was ueber `ende` hinausragt, meldet sie nicht: das ist ein Ueberlauf, und
+ * `taktUeberlauf` muss vorher gelaufen sein.
  */
-const fuellfehler = (takt: Takt, beginn: Bruch, ende: Bruch): Fuellfehler | undefined => {
-  const geordnet = elemente(takt)
-    .filter((e) => vergleiche(e.position, beginn) >= 0 && vergleiche(e.position, ende) < 0)
-    .sort((a, b) => vergleiche(a.position, b.position));
+const fuellfehler = (
+  takt: Takt,
+  inhalt: readonly (Schlag | Pause)[],
+  beginn: Bruch,
+  ende: Bruch,
+): Fuellfehler | undefined => {
+  const geordnet = [...inhalt].sort((a, b) => vergleiche(a.position, b.position));
   let bisher = beginn;
   for (const element of geordnet) {
     const lage = vergleiche(element.position, bisher);
@@ -331,13 +336,12 @@ const pruefeTolen = (
     if (vergleiche(tole.position, bisher) < 0) throw fehler("ueberlappt die Tole davor");
     bisher = ende;
 
-    const zuLang = elemente(takt).find(
-      (e) =>
-        liegtIn(e.position, tole) &&
-        vergleiche(addiere(e.position, gespielteDauer(takt, e)), ende) > 0,
+    const inhalt = elemente(takt).filter((e) => liegtIn(e.position, tole));
+    const zuLang = inhalt.find(
+      (e) => vergleiche(addiere(e.position, gespielteDauer(takt, e)), ende) > 0,
     );
     if (zuLang) throw fehler(`ist zu lang: ${benenne(zuLang)} auf ${alsText(zuLang.position)}`);
-    const luecke = fuellfehler(takt, tole.position, ende);
+    const luecke = fuellfehler(takt, inhalt, tole.position, ende);
     if (luecke) throw fehler(`ist nicht gefuellt: ${luecke.art} auf ${alsText(luecke.stelle)}`);
   }
 };
@@ -363,8 +367,8 @@ export const ort = (versNummer: number, taktNummer: number): string =>
 
 /**
  * Ein Ruf ohne gueltige Landung: kein Schlag danach, keiner genau eine Achtel
- * spaeter, einer in der falschen Hand oder einer, der keine Dupfe ist. Ein Ruf, der nirgends landet, wird
- * weder gezeichnet noch gespielt.
+ * spaeter, einer in der falschen Hand oder einer, der keine Dupfe ist. Ein
+ * Ruf, der nirgends landet, wird weder gezeichnet noch gespielt.
  */
 export class UngueltigerRufError extends Error {
   constructor(
@@ -375,8 +379,8 @@ export class UngueltigerRufError extends Error {
   ) {
     super(
       `${ort(versNummer, taktNummer)}: ${schlag.figur} ${schlag.hand} auf ` +
-        `${schlag.position.zaehler}/${schlag.position.nenner} hat keine Landung ` +
-        `auf einer Dupfe eine Achtel spaeter in derselben Hand`,
+        `${alsText(schlag.position)} hat keine Landung auf einer Dupfe eine ` +
+        `Achtel spaeter in derselben Hand`,
     );
     this.name = "UngueltigerRufError";
   }
@@ -416,7 +420,7 @@ const pruefeAuftaktForm = (auftakt: Takt, taktart: Taktart, versNummer: number):
       `${benenne(ueberlauf)} auf ${alsText(ueberlauf.position)} passt nicht in den Takt`,
     );
   }
-  const luecke = fuellfehler(auftakt, beginn, taktLaenge(taktart));
+  const luecke = fuellfehler(auftakt, elemente(auftakt), beginn, taktLaenge(taktart));
   if (luecke) throw fehler(`${luecke.art} auf ${alsText(luecke.stelle)}`);
 };
 
@@ -573,9 +577,11 @@ const vorigesElement = (
  * geschriebener Reihenfolge — auch im vorigen Takt oder im Auftakt.
  * `undefined`, wenn davor nichts oder eine Pause steht.
  *
- * Die eine Stelle, die sagt, wo ein Dreierruf seine gerollten Dupfe herleitet:
+ * Die eine Stelle, die sagt, von wo das Zeichen eines Dreierrufs gesetzt wird:
  * `pruefeMarsch` prueft, dass es ihn gibt, das Layout setzt das Zeichen
- * zwischen ihn und die Landung.
+ * zwischen ihn und die Landung. Die Wiedergabe nimmt stattdessen den Schlag,
+ * der zuletzt erklungen ist — bei der Wiederholung ist das der wiederkehrende
+ * Auftakt, nicht der geschriebene.
  */
 export const vorigerSchlag = (
   vers: Vers,
@@ -583,7 +589,7 @@ export const vorigerSchlag = (
   index: number,
 ): Schlagstelle | undefined => {
   const vorher = vorigesElement(vers, taktIndex, index);
-  if (!vorher || !("figur" in vorher.element)) return undefined;
+  if (!vorher || !istSchlag(vorher.element)) return undefined;
   const schlag = vorher.element;
   return {
     schlag,
@@ -626,7 +632,7 @@ const pruefeGerollteDupfe = (
   const fehler = (grund: string) =>
     new UngueltigerDreierrufError(versIndex + 1, taktIndex + 1, schlag, grund);
   if (!vorher) throw fehler("hat keinen Schlag vor sich im Vers");
-  if (!("figur" in vorher.element)) throw fehler("folgt auf eine Pause");
+  if (!istSchlag(vorher.element)) throw fehler("folgt auf eine Pause");
 };
 
 /**
@@ -651,7 +657,7 @@ export const pruefeMarsch = (marsch: Marsch): void => {
       if (ueberlauf) {
         throw new UngueltigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);
       }
-      const fehler = fuellfehler(takt, NULL, taktLaenge(vers.taktart));
+      const fehler = fuellfehler(takt, elemente(takt), NULL, taktLaenge(vers.taktart));
       if (fehler) throw new LueckenhafterTaktError(versIndex + 1, taktIndex + 1, fehler);
     });
     // Erst wenn alle Takte stehen: der Auftakt kehrt ueber den letzten Takt

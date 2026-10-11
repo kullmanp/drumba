@@ -155,3 +155,16 @@ ZicZac Vers 1, Takt 3". Screenshot `drumba-takt3-4.png` beside `ziczac-takt3.png
 - Playback takes the time of whichever Schlag was played last, so on a repeat the gap runs from
   the replayed Auftakt.
 - The Fünferruf's error message now says the Landung must be a Dupfe.
+
+**2026-10-11, review (agent).** A two-axis review of both slices found one bug, fixed in "Keep
+an unordered Auftakt an error and tidy the Tole and Dreierruf checks": the Tole commit had
+`fuellfehler` skip elements before its `beginn`, so an Auftakt with its Schläge out of order
+passed. Rejected findings:
+
+- _Computing the mark's head and Hals x in the renderer._ That is the inner shape of one mark,
+  like the spacing of the Wirbel's slashes, so the renderer keeps it.
+- _`ROLL_DUPFE_LAUTSTAERKE` vs `gerollteDupfe`._ The name is the spec's own.
+- _Out of date in `GLOSSARY.md`, left for you:_ **Ruf** says "Only the Fünferruf is modelled so
+  far" and that the Landung is "always a Dupfe", but a Dreierruf's Landung has Figur
+  `Dreierruf`. ADR-0004 says the same. "gerollte Dupfe" is documented on `FIGURMERKMALE`, not
+  in the glossary.

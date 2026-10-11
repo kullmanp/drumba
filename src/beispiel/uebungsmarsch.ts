@@ -6,16 +6,16 @@ import { andereHand } from "../model/marsch";
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
  * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
  * Dupfe, Schlepp, Double, Fuenferruf und Dreierruf — auf beiden Haenden, in
- * 6/8 und in 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich und
- * einer aus dem Auftakt in Takt 1.
+ * 6/8 und in 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den
+ * Taktstrich und einer aus dem Auftakt in Takt 1.
  *
- * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
- * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt
- * Pausen: eine Achtelpause vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und
- * am Ende eine Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner
- * Quintole und dem Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet. Er beginnt mit dem Auftakt aus ZicZac, Vers 1,
- * der bei der Wiederholung und am Ende des 6/8-Verses ueber eine Pause
- * wiederkehrt.
+ * Der 2/4-Vers beginnt mit dem Auftakt aus ZicZac, Vers 1, der bei der
+ * Wiederholung und am Ende des 6/8-Verses ueber eine Pause wiederkehrt. Er
+ * mischt Achtel und Sechzehntel unter einem Balken, mit Balkenstummeln — der
+ * erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt Pausen: eine Achtelpause
+ * vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und am Ende eine
+ * Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner Quintole und dem
+ * Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet.
  */
 
 const schlag = (

@@ -191,7 +191,8 @@ const Viertelpause = ({ x, y }: { x: number; y: number }) => {
 const GerollteDupfe = ({ glyph }: { glyph: Extract<Glyph, { typ: "gerollteDupfe" }> }) => {
   const haelse = Array.from(
     { length: glyph.anzahl },
-    (_, i) => glyph.x + (i - (glyph.anzahl - 1) / 2) * ROLL_HALS_ABSTAND,
+    // Um die Mitte des ganzen Zeichens, nicht der Haelse: die Koepfe stehen rechts davon.
+    (_, i) => glyph.x - ROLL_HALS_VERSATZ / 2 + (i - (glyph.anzahl - 1) / 2) * ROLL_HALS_ABSTAND,
   );
   const halsEnde = glyph.y + ROLL_HALS_LAENGE;
   return (

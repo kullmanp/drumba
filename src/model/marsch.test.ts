@@ -339,6 +339,13 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
 });
 
 describe("pruefeMarsch: Auftakt", () => {
+  it("verwirft einen Auftakt, dessen Schlaege nicht nach Position geordnet sind", () => {
+    const m = marschAus(
+      versMitAuftakt([2, 4], 1, [dupfe([3, 8], [1, 8]), dupfe([1, 4], [1, 8])], endetMitPause()),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+  });
+
   it("laesst einen Ruf-Auftakt gelten, der in Takt 1 landet und bei der Wiederholung ueber eine Pause faellt", () => {
     const m = marschAus(versMitAuftakt([2, 4], 2, rufAuftakt(), endetMitPause()));
     expect(() => pruefeMarsch(m)).not.toThrow();

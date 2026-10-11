@@ -99,7 +99,7 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
    * bei der Wiederholung ueber das Ende des letzten Taktes faellt —, also ist
    * es der Schlag, auf den die gerollten Dupfe eines Dreierrufs folgen.
    */
-  let vorigerSchlag: Bruch | undefined;
+  let vorigerZeitpunkt: Bruch | undefined;
 
   /** Spielt die Schlaege eines Taktes, der zur Zeit `beginn` (in Zaehlzeiten) beginnt. */
   const spieleTakt = (takt: Takt, taktart: Taktart, beginn: Bruch): void => {
@@ -112,18 +112,18 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
       // Die gerollten Dupfe teilen die gespielte Strecke vom vorigen Schlag bis
       // hierher in gleiche Teile. Dass es den vorigen Schlag gibt, hat
       // `pruefeMarsch` sichergestellt.
-      if (merkmale.gerollteDupfe && vorigerSchlag) {
+      if (merkmale.gerollteDupfe && vorigerZeitpunkt) {
         const { anzahl } = merkmale.gerollteDupfe;
-        const strecke = subtrahiere(hier, vorigerSchlag);
+        const strecke = subtrahiere(hier, vorigerZeitpunkt);
         for (let i = 1; i <= anzahl; i++) {
           anschlaege.push({
-            zeit: sekunden(addiere(vorigerSchlag, multipliziere(strecke, bruch(i, anzahl + 1)))),
+            zeit: sekunden(addiere(vorigerZeitpunkt, multipliziere(strecke, bruch(i, anzahl + 1)))),
             hand: andereHand(schlag.hand),
             lautstaerke: ROLL_DUPFE_LAUTSTAERKE,
           });
         }
       }
-      vorigerSchlag = hier;
+      vorigerZeitpunkt = hier;
       if (merkmale.leiseDupfe) {
         anschlaege.push({
           zeit: zeitpunkt(subtrahiere(NULL, merkmale.leiseDupfe.vorlauf)),
