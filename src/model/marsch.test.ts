@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "./bruch";
-import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "./marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Tole, Vers } from "./marsch";
 import {
   andereHand,
   AUFTAKT,
@@ -11,6 +11,8 @@ import {
   taktUeberlauf,
   UngueltigerAuftaktError,
   UngueltigerRufError,
+  UngueltigerTaktError,
+  UngueltigeToleError,
   zaehlzeit,
 } from "./marsch";
 
@@ -28,14 +30,25 @@ const pause = (position: [number, number], wert: [number, number]): Pause => ({
   wert: bruch(...wert),
 });
 
-/** Ein Takt aus Schlaegen und Pausen, in beliebiger Mischung hingeschrieben. */
-const takt = (elemente: (Schlag | Pause)[]): Takt => ({
+type Taktinhalt = Schlag | Pause | Tole;
+
+/** Ein Takt aus Schlaegen, Pausen und Tolen, in beliebiger Mischung hingeschrieben. */
+const takt = (elemente: Taktinhalt[]): Takt => ({
   schlaege: elemente.filter((e): e is Schlag => "figur" in e),
-  pausen: elemente.filter((e): e is Pause => !("figur" in e)),
+  pausen: elemente.filter((e): e is Pause => !("figur" in e) && !("anzahl" in e)),
+  tolen: elemente.filter((e): e is Tole => "anzahl" in e),
 });
 
+/** Eine Tole: `anzahl` Schlaege des Wertes `einheit` in der Zeit von `statt`. */
+const tole = (
+  position: [number, number],
+  anzahl: number,
+  statt: number,
+  einheit: [number, number],
+): Tole => ({ position: bruch(...position), anzahl, statt, einheit: bruch(...einheit) });
+
 /** Ein 2/4-Vers aus den gegebenen Takten. */
-const zweiViertel = (...takte: (Schlag | Pause)[][]): Marsch => ({
+const zweiViertel = (...takte: Taktinhalt[][]): Marsch => ({
   titel: "Test",
   verse: [{ taktart: { zaehler: 2, nenner: 4 }, wiederholungen: 1, takte: takte.map(takt) }],
 });
@@ -98,37 +111,37 @@ describe("taktUeberlauf", () => {
   const sechsAchtel = { zaehler: 6, nenner: 8 };
 
   it("meldet keinen Ueberlauf fuer einen exakt gefuellten Takt", () => {
-    const takt: Takt = { schlaege: [dupfe([5, 8], [1, 8])], pausen: [] };
+    const takt: Takt = { tolen: [], schlaege: [dupfe([5, 8], [1, 8])], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBeUndefined();
   });
 
   // Nur der Ueberlauf: dass der halbleere Takt eine Luecke hat, meldet pruefeMarsch.
   it("meldet keinen Ueberlauf fuer einen halbleeren Takt", () => {
-    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8])], pausen: [] };
+    const takt: Takt = { tolen: [], schlaege: [dupfe([0, 1], [1, 8])], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBeUndefined();
   });
 
   it("meldet den Schlag, dessen Wert ueber den Takt hinausragt", () => {
     const zuLang = dupfe([5, 8], [1, 4]);
-    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8]), zuLang], pausen: [] };
+    const takt: Takt = { tolen: [], schlaege: [dupfe([0, 1], [1, 8]), zuLang], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuLang);
   });
 
   it("meldet den Schlag, der jenseits des Taktendes beginnt", () => {
     const zuSpaet = dupfe([7, 8], [1, 8]);
-    const takt: Takt = { schlaege: [zuSpaet], pausen: [] };
+    const takt: Takt = { tolen: [], schlaege: [zuSpaet], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuSpaet);
   });
 
   it("meldet auch eine Pause, die ueber das Taktende hinausragt", () => {
     const zuLang = pause([1, 2], [3, 8]);
-    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 2])], pausen: [zuLang] };
+    const takt: Takt = { tolen: [], schlaege: [dupfe([0, 1], [1, 2])], pausen: [zuLang] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuLang);
   });
 
   it("meldet einen Schlag vor dem Taktbeginn", () => {
     const zuFrueh = dupfe([-1, 8], [1, 8]);
-    const takt: Takt = { schlaege: [zuFrueh], pausen: [] };
+    const takt: Takt = { tolen: [], schlaege: [zuFrueh], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuFrueh);
   });
 });
@@ -470,5 +483,92 @@ describe("pruefeMarsch: Double", () => {
   it("laesst ein Double auf dem Beginn von Takt 1 gelten, obwohl seine Dupfe davor faellt", () => {
     const m = zweiViertel([schlag("Double", "rechts", [0, 1], [2, 4])]);
     expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+});
+
+describe("pruefeMarsch: Tole", () => {
+  /** Die erste Zaehlzeit von ZicZac, Vers 1, Takt 3: vier Sechzehntel. */
+  const ersteZaehlzeit = (): Schlag[] => [
+    schlag("Double", "rechts", [0, 1], [1, 16]),
+    schlag("Dupfe", "links", [1, 16], [1, 16]),
+    schlag("Dupfe", "rechts", [1, 8], [1, 16]),
+    schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+  ];
+  /** Die Quintole der zweiten Zaehlzeit: Achtel, Sechzehntel, Achtel. */
+  const quintole = (): Taktinhalt[] => [
+    tole([1, 4], 5, 4, [1, 16]),
+    schlag("Dupfe", "links", [1, 4], [1, 8]),
+    schlag("Dupfe", "links", [7, 20], [1, 16]),
+    schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+  ];
+
+  it("laesst ZicZac, Vers 1, Takt 3 mit seiner Quintole gelten", () => {
+    const m = zweiViertel([...ersteZaehlzeit(), ...quintole()]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("laesst eine Triole aus drei Achteln statt zwei gelten", () => {
+    const m = zweiViertel([
+      tole([0, 1], 3, 2, [1, 8]),
+      dupfe([0, 1], [1, 8]),
+      dupfe([1, 12], [1, 8]),
+      dupfe([1, 6], [1, 8]),
+      dupfe([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft eine Quintole, der eine Sechzehntel fehlt", () => {
+    const m = zweiViertel([
+      ...ersteZaehlzeit(),
+      tole([1, 4], 5, 4, [1, 16]),
+      schlag("Dupfe", "links", [1, 4], [1, 8]),
+      schlag("Dupfe", "links", [7, 20], [1, 16]),
+      schlag("Dupfe", "rechts", [2, 5], [1, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Takt 1/);
+  });
+
+  it("verwirft eine Quintole, die eine Sechzehntel zu lang ist", () => {
+    const m = zweiViertel([
+      ...ersteZaehlzeit(),
+      tole([1, 4], 5, 4, [1, 16]),
+      schlag("Dupfe", "links", [1, 4], [1, 8]),
+      schlag("Dupfe", "links", [7, 20], [1, 16]),
+      schlag("Dupfe", "rechts", [2, 5], [3, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
+  });
+
+  // Mit ihren notierten Werten laeuft die letzte Achtel ueber das Taktende.
+  it("verwirft dieselben Schlaege ohne Tole", () => {
+    const m = zweiViertel([...ersteZaehlzeit(), ...quintole().slice(1)]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerTaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Takt 1/);
+  });
+
+  it("verwirft eine Tole, die ueber das Taktende hinausreicht", () => {
+    const m = zweiViertel([
+      dupfe([0, 1], [1, 4]),
+      dupfe([1, 4], [1, 8]),
+      tole([3, 8], 5, 4, [1, 16]),
+      dupfe([3, 8], [1, 16]),
+      dupfe([17, 40], [1, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Takt 1/);
+  });
+
+  it("verwirft zwei Tolen, die sich ueberlappen", () => {
+    const m = zweiViertel([
+      tole([0, 1], 3, 2, [1, 8]),
+      tole([1, 6], 3, 2, [1, 8]),
+      dupfe([0, 1], [1, 8]),
+      dupfe([1, 12], [1, 8]),
+      dupfe([1, 6], [1, 8]),
+      dupfe([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
   });
 });

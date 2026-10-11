@@ -84,6 +84,8 @@ const VIERTELPAUSE_STAERKE = 3;
 /** Der Bogen eines Rufs ist feiner als der Hals. */
 const BOGEN_STAERKE = 0.6;
 const RUF_ZAHL_GROESSE = 8;
+/** Die Zahl einer Tole, etwas kleiner als die eines Rufs und aufrecht, wie in ZicZac. */
+const TOLE_ZAHL_GROESSE = 7;
 
 /**
  * Die Halbachsen der Ellipse, die eine gegebene Huellbox unter `KOPF_NEIGUNG`
@@ -281,6 +283,21 @@ const zeichne = (glyph: Glyph) => {
           fontSize={RUF_ZAHL_GROESSE}
           fontStyle="italic"
           textAnchor="middle"
+          fill="currentColor"
+          stroke="none"
+        >
+          {glyph.text}
+        </text>
+      );
+    case "toleZahl":
+      // Das Layout nennt die Oberkante: die Zahl haengt unter den Balken.
+      return (
+        <text
+          x={glyph.x}
+          y={glyph.y}
+          fontSize={TOLE_ZAHL_GROESSE}
+          textAnchor="middle"
+          dominantBaseline="hanging"
           fill="currentColor"
           stroke="none"
         >

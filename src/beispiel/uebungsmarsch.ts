@@ -12,7 +12,8 @@ import { andereHand } from "../model/marsch";
  * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
  * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt
  * Pausen: eine Achtelpause vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und
- * am Ende eine Viertelpause. Er beginnt mit dem Auftakt aus ZicZac, Vers 1,
+ * am Ende eine Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner
+ * Quintole, noch ohne die Dreierrufe des Originals. Er beginnt mit dem Auftakt aus ZicZac, Vers 1,
  * der bei der Wiederholung und am Ende des 6/8-Verses ueber eine Pause
  * wiederkehrt.
  */
@@ -40,6 +41,7 @@ const wechselnd = (figuren: readonly Figur[], beginn: Hand, nenner: number): Tak
     schlag(figur, i % 2 === 0 ? beginn : andereHand(beginn), [i, nenner], [1, nenner]),
   ),
   pausen: [],
+  tolen: [],
 });
 
 export const uebungsmarsch: Marsch = {
@@ -64,6 +66,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [5, 8], [1, 8]),
           ],
           pausen: [],
+          tolen: [],
         },
         // Punktierte Viertel ueber die erste Zaehlzeit, dann drei Achtel.
         {
@@ -74,6 +77,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [5, 8], [1, 8]),
           ],
           pausen: [],
+          tolen: [],
         },
         // Zwei punktierte Viertel — ohne Balken.
         {
@@ -82,6 +86,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Schlepp", "links", [3, 8], [3, 8]),
           ],
           pausen: [],
+          tolen: [],
         },
         // Punktierte Viertel, Achtel, Viertelpause: der Vers endet auf einer Pause,
         // ueber die der Auftakt des naechsten Verses faellt.
@@ -91,6 +96,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [3, 8], [1, 8]),
           ],
           pausen: [pause([1, 2], [1, 4])],
+          tolen: [],
         },
       ],
     },
@@ -99,7 +105,11 @@ export const uebungsmarsch: Marsch = {
       wiederholungen: 2,
       // ZicZac, Vers 1: ein freier Fuenferruf auf der letzten Achtel vor dem
       // ersten Taktstrich, der auf Takt 1 landet.
-      auftakt: { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])], pausen: [] },
+      auftakt: {
+        schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+        pausen: [],
+        tolen: [],
+      },
       takte: [
         // ZicZac, Vers 1, Takt 1: Achtel, Sechzehntel, Sechzehntel | Sechzehntel,
         // Achtel, Sechzehntel — der zweite Balken nur unter den Sechzehnteln,
@@ -114,6 +124,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Schlepp", "rechts", [7, 16], [1, 16]),
           ],
           pausen: [],
+          tolen: [],
         },
         // ZicZac, Vers 1, Takt 2: Achtelpause, dann drei Doubles als Achtel — das
         // erste allein auf seiner Zaehlzeit mit Fahne, die beiden anderen gebalkt.
@@ -124,6 +135,23 @@ export const uebungsmarsch: Marsch = {
             schlag("Double", "links", [3, 8], [1, 8]),
           ],
           pausen: [pause([0, 1], [1, 8])],
+          tolen: [],
+        },
+        // ZicZac, Vers 1, Takt 3: vier Sechzehntel, dann eine Quintole — Achtel,
+        // Sechzehntel, Achtel in der Zeit von vier Sechzehnteln, auf ihren
+        // gespielten Positionen.
+        {
+          schlaege: [
+            schlag("Double", "rechts", [0, 1], [1, 16]),
+            schlag("Dupfe", "links", [1, 16], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 8], [1, 16]),
+            schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+            schlag("Dupfe", "links", [1, 4], [1, 8]),
+            schlag("Dupfe", "links", [7, 20], [1, 16]),
+            schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+          ],
+          pausen: [],
+          tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
         },
         // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
         {
@@ -134,6 +162,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [7, 16], [1, 16]),
           ],
           pausen: [],
+          tolen: [],
         },
         // Acht Sechzehntel — eine Balkengruppe je Viertel.
         wechselnd(
@@ -150,11 +179,13 @@ export const uebungsmarsch: Marsch = {
             schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
           ],
           pausen: [],
+          tolen: [],
         },
         // Viertel und Viertelpause, wie am Ende von ZicZac, Vers 3.
         {
           schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
           pausen: [pause([1, 4], [1, 4])],
+          tolen: [],
         },
       ],
     },

@@ -118,3 +118,19 @@ Balken". That was wrong: it is a Quintole. A Ruf is marked by its Wirbel.
 
 Reference: `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`, cropped in
 `ziczac-takt3.png`.
+
+## Comments
+
+**2026-10-11, built (agent), awaiting your check.** Commit "Write ZicZac Vers 1, Takt 3 with its
+Quintole". Screenshot `drumba-takt3.png` beside `ziczac-takt3.png`.
+
+- The "5" is a new `toleZahl` glyph rather than `rufZahl`: its `y` is the number's top edge
+  (it hangs under the Balken, the renderer uses `dominantBaseline="hanging"`), where `rufZahl`
+  gives a baseline above a Bogen. It is drawn upright, as in the original, not italic like the
+  Wirbel's number.
+- "The same Schläge without a Tole" is rejected as an overrun (`UngueltigerTaktError`): the
+  last Achtel at 2/5 runs past the Takt's end before the overlap at 7/20 is reached.
+- Tolen are checked before the Takt's own fill, so a mis-filled Tole is reported as an
+  `UngueltigeToleError`, not as a gap in the Takt.
+- Loose end: the Fünferruf's Landung check still measures exactly an Achtel; a Ruf inside a
+  Tole would be rejected. No original needs it yet.

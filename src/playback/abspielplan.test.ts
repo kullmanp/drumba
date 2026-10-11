@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
-import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "../model/marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Tole, Vers } from "../model/marsch";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { abspielplan, VORSCHLAG_VORLAUF } from "./abspielplan";
 
@@ -19,18 +19,20 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
     schlag("Dupfe", i % 2 === 0 ? "rechts" : "links", [i * wert[0], wert[1]], wert),
   ),
   pausen: [],
+  tolen: [],
 });
 
-/** Ein Takt, wie ihn ein Test hinschreibt: Pausen nur, wo es welche gibt. */
+/** Ein Takt, wie ihn ein Test hinschreibt: Pausen und Tolen nur, wo es welche gibt. */
 interface Taktentwurf {
   readonly schlaege: readonly Schlag[];
   readonly pausen?: readonly Pause[];
+  readonly tolen?: readonly Tole[];
 }
 
 const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Taktentwurf[]): Vers => ({
   taktart: { zaehler: taktart[0], nenner: taktart[1] },
   wiederholungen,
-  takte: takte.map((takt): Takt => ({ pausen: [], ...takt })),
+  takte: takte.map((takt): Takt => ({ pausen: [], tolen: [], ...takt })),
 });
 
 const marsch = (...verse: Vers[]): Marsch => ({ titel: "Test", verse });
@@ -316,6 +318,29 @@ describe("Pausen", () => {
   });
 });
 
+describe("Tole", () => {
+  it("spielt die Quintole am Beginn ihrer Zaehlzeit und auf 2/5 und 3/5 davon", () => {
+    // 2/4 bei Tempo 120: eine Zaehlzeit dauert 0.5 s, ein Fuenftel davon 0.1 s.
+    const quintole: Tole = { position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) };
+    const m = marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Dupfe", "links", [7, 20], [1, 16]),
+          schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+        ],
+        tolen: [quintole],
+      }),
+    );
+
+    const [, ...quintolenZeiten] = zeiten(m, 120);
+    expect(quintolenZeiten[0]).toBeCloseTo(0.5, 10);
+    expect(quintolenZeiten[1]).toBeCloseTo(0.5 + (2 / 5) * 0.5, 10);
+    expect(quintolenZeiten[2]).toBeCloseTo(0.5 + (3 / 5) * 0.5, 10);
+  });
+});
+
 describe("Reihenfolge", () => {
   it("ordnet nach der Zeit, auch wenn ein Vorschlag vor den vorigen Schlag faellt", () => {
     // So schnell, dass eine Sechzehntel nur halb so lang dauert wie der Vorlauf.
@@ -377,7 +402,7 @@ describe("Auftakt", () => {
     ...takte: Taktentwurf[]
   ): Vers => ({
     ...vers(taktart, wiederholungen, ...takte),
-    auftakt: { schlaege: auftakt, pausen: [] },
+    auftakt: { schlaege: auftakt, pausen: [], tolen: [] },
   });
 
   it("beginnt den Marsch mit dem Auftakt; Takt 1 folgt eine Auftaktlaenge spaeter", () => {

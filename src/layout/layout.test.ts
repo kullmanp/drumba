@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { addiere, bruch } from "../model/bruch";
-import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "../model/marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Tole, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { layout, UnzeichenbarePauseError } from "./layout";
@@ -20,18 +20,20 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
     schlag("Dupfe", i % 2 === 0 ? "rechts" : "links", [i * wert[0], wert[1]], wert),
   ),
   pausen: [],
+  tolen: [],
 });
 
-/** Ein Takt, wie ihn ein Test hinschreibt: Pausen nur, wo es welche gibt. */
+/** Ein Takt, wie ihn ein Test hinschreibt: Pausen und Tolen nur, wo es welche gibt. */
 interface Taktentwurf {
   readonly schlaege: readonly Schlag[];
   readonly pausen?: readonly Pause[];
+  readonly tolen?: readonly Tole[];
 }
 
 const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Taktentwurf[]): Vers => ({
   taktart: { zaehler: taktart[0], nenner: taktart[1] },
   wiederholungen,
-  takte: takte.map((takt): Takt => ({ pausen: [], ...takt })),
+  takte: takte.map((takt): Takt => ({ pausen: [], tolen: [], ...takt })),
 });
 
 const marsch = (titel: string, ...verse: Vers[]): Marsch => ({ titel, verse });
@@ -47,7 +49,10 @@ const mitAuftakt = (
   wiederholungen: 1 | 2,
   auftakt: Taktentwurf,
   ...takte: Taktentwurf[]
-): Vers => ({ ...vers(taktart, wiederholungen, ...takte), auftakt: { pausen: [], ...auftakt } });
+): Vers => ({
+  ...vers(taktart, wiederholungen, ...takte),
+  auftakt: { pausen: [], tolen: [], ...auftakt },
+});
 
 /** Ein 2/4-Takt aus Dupfen der gegebenen Werte, ab Position 0 lueckenlos gereiht. */
 const reihe = (...werte: [number, number][]): Marsch => {
@@ -1300,5 +1305,52 @@ describe("Auftakt", () => {
 
     expect(erster.x).toBeCloseTo(linie.x1, 10);
     expect(erster.strichart).toBe("wiederholungAnfang");
+  });
+});
+
+describe("Tole", () => {
+  /** ZicZac, Vers 1, Takt 3: vier Sechzehntel, dann eine Quintole aus Achtel, Sechzehntel, Achtel. */
+  const quintolenTakt = (): Taktentwurf => ({
+    schlaege: [
+      schlag("Double", "rechts", [0, 1], [1, 16]),
+      schlag("Dupfe", "links", [1, 16], [1, 16]),
+      schlag("Dupfe", "rechts", [1, 8], [1, 16]),
+      schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+      schlag("Dupfe", "links", [1, 4], [1, 8]),
+      schlag("Dupfe", "links", [7, 20], [1, 16]),
+      schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+    ],
+    tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
+  });
+  const quintole = () => marsch("Quintole", vers([2, 4], 1, quintolenTakt()));
+
+  it("zeichnet die Zahl der Tole mittig zwischen dem ersten und letzten Hals ihrer Schlaege", () => {
+    const haelse = glyphen(quintole(), "hals");
+    const [zahl] = glyphen(quintole(), "toleZahl");
+
+    expect(zahl!.text).toBe("5");
+    expect(zahl!.x).toBeCloseTo((haelse[4]!.x + haelse[6]!.x) / 2, 10);
+  });
+
+  it("legt die Zahl unter die Balken ihrer Schlaege", () => {
+    const [zahl] = glyphen(quintole(), "toleZahl");
+    const balken = [...glyphen(quintole(), "balken"), ...glyphen(quintole(), "balkenstummel")];
+
+    expect(balken.length).toBeGreaterThan(0);
+    for (const b of balken) expect(zahl!.y).toBeGreaterThan(b.y);
+  });
+
+  it("zeichnet in einem Takt ohne Tole keine Zahl", () => {
+    const m = marsch("Ohne", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
+    expect(glyphen(m, "toleZahl")).toEqual([]);
+  });
+
+  it("gibt der Sechzehntel der Quintole einen Balkenstummel nach links", () => {
+    const haelse = glyphen(quintole(), "hals");
+    const stummel = glyphen(quintole(), "balkenstummel");
+
+    expect(stummel).toHaveLength(1);
+    expect(stummel[0]!.x1).toBeCloseTo(haelse[5]!.x, 10);
+    expect(stummel[0]!.x2).toBeLessThan(stummel[0]!.x1);
   });
 });

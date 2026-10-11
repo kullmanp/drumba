@@ -9,6 +9,7 @@ import {
   ort,
   pruefeMarsch,
   taktLaenge,
+  toleAn,
   zaehlzeit,
 } from "../model/marsch";
 
@@ -110,6 +111,11 @@ const BOGEN_LUFT = 2;
 const BOGEN_HOEHE = 8;
 /** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
 const ZAHL_LUFT = 2;
+/**
+ * Luft zwischen dem untersten Balken und der Oberkante der Zahl einer Tole.
+ * Nach Augenmass an ZicZac, Vers 1, Takt 3.
+ */
+const TOLE_ZAHL_LUFT = 4;
 /**
  * Wie weit ein Balkenstummel vom Hals in seine Gruppe reicht — etwa eine
  * Kopfbreite, nach Augenmass an ZicZac.
@@ -238,6 +244,14 @@ export type Glyph =
       /** Die Mitte der Zahl, ueber dem Bogen. */
       readonly x: number;
       /** Die Grundlinie der Zahl. */
+      readonly y: number;
+      readonly text: string;
+    }
+  | {
+      readonly typ: "toleZahl";
+      /** Die Mitte der Zahl, halbwegs zwischen dem ersten und letzten Hals der Tole. */
+      readonly x: number;
+      /** Die Oberkante der Zahl, unter dem untersten Balken. */
       readonly y: number;
       readonly text: string;
     }
@@ -614,6 +628,20 @@ const legeTakt = (
   }
 
   for (const gruppe of gruppen) legeBalken(gruppe, balkenY, glyphen);
+  // Die Zahl einer Tole steht unter den Balken ihrer Schlaege. Wie die Balken
+  // haengen, entscheidet weiter die Zaehlzeit; die Tole aendert nur, wo ihre
+  // Schlaege stehen, und das sagt schon ihre gespielte Position.
+  for (const tole of takt.tolen) {
+    const ihre = platzierte.filter((p) => toleAn(takt, p.schlag.position) === tole);
+    const [erster] = ihre;
+    if (!erster) continue;
+    glyphen.push({
+      typ: "toleZahl",
+      x: (erster.halsX + ihre.at(-1)!.halsX) / 2,
+      y: balkenY + TOLE_ZAHL_LUFT,
+      text: String(tole.anzahl),
+    });
+  }
   legePausen(takt, inhaltX, linieY, versNummer, taktNummer, glyphen);
 
   return platzierte;

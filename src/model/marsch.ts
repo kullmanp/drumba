@@ -74,12 +74,31 @@ export interface Pause {
 }
 
 /**
- * Ein Takt: seine geordneten Schlaege und, als eigene Liste daneben, seine
- * Pausen. Beide zusammen fuellen ihn lueckenlos.
+ * Eine Tole: `anzahl` Schlaege des Wertes `einheit` in der Zeit von `statt` —
+ * die Quintole sind fuenf Sechzehntel statt vier. Sie dauert `statt` mal
+ * `einheit`.
+ *
+ * Die Schlaege und Pausen in ihr behalten ihren notierten Wert, stehen aber auf
+ * ihrer gespielten Position; so lesen Layout und Wiedergabe Positionen wie
+ * ueberall. Zu ihr gehoert, was auf einer Position in ihrer Spanne steht.
+ */
+export interface Tole {
+  /** Wo sie beginnt, gespielt, in Ganzen ab Taktbeginn. */
+  readonly position: Bruch;
+  readonly anzahl: number;
+  readonly statt: number;
+  /** Der notierte Wert, der gezaehlt wird: 1/16 bei der Quintole. */
+  readonly einheit: Bruch;
+}
+
+/**
+ * Ein Takt: seine geordneten Schlaege und, als eigene Listen daneben, seine
+ * Pausen und Tolen. Schlaege und Pausen zusammen fuellen ihn lueckenlos.
  */
 export interface Takt {
   readonly schlaege: readonly Schlag[];
   readonly pausen: readonly Pause[];
+  readonly tolen: readonly Tole[];
 }
 
 /**
@@ -143,19 +162,44 @@ export const auftaktBeginn = (auftakt: Takt): Bruch => auftakt.schlaege[0]?.posi
 /** Was einen Takt fuellt: seine Schlaege und seine Pausen, in einer Liste. */
 const elemente = (takt: Takt): (Schlag | Pause)[] => [...takt.schlaege, ...takt.pausen];
 
+/** Wie lange eine Tole gespielt dauert: `statt` mal ihre Einheit. */
+export const toleDauer = (tole: Tole): Bruch => multipliziere(bruch(tole.statt, 1), tole.einheit);
+
+const toleEnde = (tole: Tole): Bruch => addiere(tole.position, toleDauer(tole));
+
+/** Ob eine Position in der Spanne einer Tole liegt — ihr Ende gehoert nicht dazu. */
+const liegtIn = (position: Bruch, tole: Tole): boolean =>
+  vergleiche(position, tole.position) >= 0 && vergleiche(position, toleEnde(tole)) < 0;
+
+/** Die Tole eines Taktes, zu der eine Position gehoert, falls es eine gibt. */
+export const toleAn = (takt: Takt, position: Bruch): Tole | undefined =>
+  takt.tolen.find((tole) => liegtIn(position, tole));
+
+/**
+ * Wie lange ein Schlag oder eine Pause gespielt dauert: der notierte Wert, in
+ * einer Tole mit `statt / anzahl` gestreckt oder gestaucht.
+ */
+const gespielteDauer = (takt: Takt, element: Schlag | Pause): Bruch => {
+  const tole = toleAn(takt, element.position);
+  return tole ? multipliziere(element.wert, bruch(tole.statt, tole.anzahl)) : element.wert;
+};
+
 /**
  * Der erste Schlag oder die erste Pause, die nicht in den Takt passt — vor dem
- * Beginn oder ueber das Ende hinaus. `undefined`, wenn der Takt gueltig ist. Ein
- * ueberlaufender Takt ist ein Datenfehler und darf nicht still gezeichnet werden.
+ * Beginn oder mit ihrer gespielten Dauer ueber das Ende hinaus. `undefined`,
+ * wenn der Takt gueltig ist. Ein ueberlaufender Takt ist ein Datenfehler und
+ * darf nicht still gezeichnet werden.
  */
 export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | Pause | undefined => {
   const laenge = taktLaenge(taktart);
   return elemente(takt).find(
     (element) =>
       vergleiche(element.position, NULL) < 0 ||
-      vergleiche(addiere(element.position, element.wert), laenge) > 0,
+      vergleiche(addiere(element.position, gespielteDauer(takt, element)), laenge) > 0,
   );
 };
+
+const alsText = (b: Bruch): string => `${b.zaehler}/${b.nenner}`;
 
 /** Wie ein Schlag oder eine Pause in einer Fehlermeldung heisst. */
 const benenne = (element: Schlag | Pause): string => ("figur" in element ? element.figur : "Pause");
@@ -190,21 +234,25 @@ export interface Fuellfehler {
 }
 
 /**
- * Wo die Schlaege und Pausen eines Taktes, nach Position geordnet, die Strecke
- * von `beginn` bis `ende` nicht genau fuellen. `undefined`, wenn sie es tun. Der
- * Beginn ist ein Parameter, weil nicht jeder Takt bei 0 anfaengt.
+ * Wo die Schlaege und Pausen eines Taktes ab `beginn`, nach Position geordnet
+ * und mit ihrer gespielten Dauer, die Strecke bis `ende` nicht genau fuellen.
+ * `undefined`, wenn sie es tun. Der Beginn ist ein Parameter, weil nicht jeder
+ * Takt bei 0 anfaengt und eine Tole mitten im Takt.
  *
- * Was ueber `ende` hinausragt, meldet sie nicht: das ist ein Ueberlauf, und
- * `taktUeberlauf` muss vorher gelaufen sein.
+ * Gezaehlt wird nur, was ab `beginn` und vor `ende` steht. Was ueber `ende`
+ * hinausragt, meldet sie nicht: das ist ein Ueberlauf, und `taktUeberlauf`
+ * muss vorher gelaufen sein.
  */
 const fuellfehler = (takt: Takt, beginn: Bruch, ende: Bruch): Fuellfehler | undefined => {
-  const geordnet = elemente(takt).sort((a, b) => vergleiche(a.position, b.position));
+  const geordnet = elemente(takt)
+    .filter((e) => vergleiche(e.position, beginn) >= 0 && vergleiche(e.position, ende) < 0)
+    .sort((a, b) => vergleiche(a.position, b.position));
   let bisher = beginn;
   for (const element of geordnet) {
     const lage = vergleiche(element.position, bisher);
     if (lage > 0) return { art: "Luecke", stelle: bisher };
     if (lage < 0) return { art: "Ueberlappung", stelle: element.position };
-    bisher = addiere(element.position, element.wert);
+    bisher = addiere(element.position, gespielteDauer(takt, element));
   }
   return vergleiche(bisher, ende) < 0 ? { art: "Luecke", stelle: bisher } : undefined;
 };
@@ -227,6 +275,60 @@ export class LueckenhafterTaktError extends Error {
     this.name = "LueckenhafterTaktError";
   }
 }
+
+/**
+ * Eine Tole, die nicht gezeichnet oder gespielt werden kann: eine, die ueber
+ * ihren Takt hinausreicht, eine andere ueberlappt oder von ihren Schlaegen und
+ * Pausen nicht genau gefuellt wird.
+ */
+export class UngueltigeToleError extends Error {
+  constructor(
+    readonly versNummer: number,
+    /** Ab 1 gezaehlt; 0 ist der Auftakt. */
+    readonly taktNummer: number,
+    readonly tole: Tole,
+    grund: string,
+  ) {
+    super(
+      `${ort(versNummer, taktNummer)}: ${tole.anzahl}er-Tole auf ` +
+        `${alsText(tole.position)} ${grund}`,
+    );
+    this.name = "UngueltigeToleError";
+  }
+}
+
+/**
+ * Prueft die Tolen eines Taktes: jede liegt in ihm, keine ueberlappt die
+ * naechste, und jede fuellen ihre Schlaege und Pausen mit ihrer gespielten
+ * Dauer genau von ihrem Beginn bis zu ihrem Ende.
+ */
+const pruefeTolen = (
+  takt: Takt,
+  taktart: Taktart,
+  versNummer: number,
+  taktNummer: number,
+): void => {
+  const geordnet = [...takt.tolen].sort((a, b) => vergleiche(a.position, b.position));
+  let bisher = NULL;
+  for (const tole of geordnet) {
+    const fehler = (grund: string) => new UngueltigeToleError(versNummer, taktNummer, tole, grund);
+    const ende = toleEnde(tole);
+    if (vergleiche(tole.position, NULL) < 0 || vergleiche(ende, taktLaenge(taktart)) > 0) {
+      throw fehler("reicht ueber den Takt hinaus");
+    }
+    if (vergleiche(tole.position, bisher) < 0) throw fehler("ueberlappt die Tole davor");
+    bisher = ende;
+
+    const zuLang = elemente(takt).find(
+      (e) =>
+        liegtIn(e.position, tole) &&
+        vergleiche(addiere(e.position, gespielteDauer(takt, e)), ende) > 0,
+    );
+    if (zuLang) throw fehler(`ist zu lang: ${benenne(zuLang)} auf ${alsText(zuLang.position)}`);
+    const luecke = fuellfehler(takt, tole.position, ende);
+    if (luecke) throw fehler(`ist nicht gefuellt: ${luecke.art} auf ${alsText(luecke.stelle)}`);
+  }
+};
 
 /**
  * Ob die Taktart zusammengesetzt ist — 6/8 und 9/8 zaehlen in punktierten
@@ -283,8 +385,6 @@ export class UngueltigerAuftaktError extends Error {
   }
 }
 
-const alsText = (b: Bruch): string => `${b.zaehler}/${b.nenner}`;
-
 /**
  * Prueft den Auftakt eines Verses fuer sich: er hat Schlaege, beginnt mit einem,
  * ist kuerzer als ein Takt und fuellt die Strecke von seinem Beginn bis zum
@@ -340,7 +440,7 @@ const pruefeAuftaktWiederkehr = (marsch: Marsch, versIndex: number): void => {
       throw new UngueltigerAuftaktError(versIndex + 1, `ist laenger als der letzte Takt ${wo}`);
     }
     const klingend = letzter.schlaege.find(
-      (schlag) => vergleiche(addiere(schlag.position, schlag.wert), beginn) > 0,
+      (schlag) => vergleiche(addiere(schlag.position, gespielteDauer(letzter, schlag)), beginn) > 0,
     );
     if (klingend) {
       throw new UngueltigerAuftaktError(
@@ -421,15 +521,22 @@ const pruefeLandung = (vers: Vers, versIndex: number, taktIndex: number, index: 
 };
 
 /**
- * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jeder Takt passt
- * in seine Taktart und wird von seinen Schlaegen und Pausen genau gefuellt, ein
+ * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jede Tole liegt
+ * in ihrem Takt und ist genau gefuellt, jeder Takt passt in seine Taktart und
+ * wird von seinen Schlaegen und Pausen genau gefuellt, ein
  * Auftakt hat seine Form und faellt beim Wiedererklingen nur ueber Pausen, und
  * jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
  */
 export const pruefeMarsch = (marsch: Marsch): void => {
   marsch.verse.forEach((vers, versIndex) => {
-    if (vers.auftakt) pruefeAuftaktForm(vers.auftakt, vers.taktart, versIndex + 1);
+    if (vers.auftakt) {
+      pruefeTolen(vers.auftakt, vers.taktart, versIndex + 1, 0);
+      pruefeAuftaktForm(vers.auftakt, vers.taktart, versIndex + 1);
+    }
     vers.takte.forEach((takt, taktIndex) => {
+      // Die Tolen zuerst: eine falsch gefuellte Tole soll als solche auffallen,
+      // nicht als Luecke oder Ueberlauf des Taktes.
+      pruefeTolen(takt, vers.taktart, versIndex + 1, taktIndex + 1);
       const ueberlauf = taktUeberlauf(takt, vers.taktart);
       if (ueberlauf) {
         throw new UngueltigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);

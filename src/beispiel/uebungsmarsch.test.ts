@@ -67,6 +67,11 @@ describe("Uebungsmarsch", () => {
     expect(pausen.map((p) => p.art)).toEqual(["Viertelpause", "Achtelpause", "Viertelpause"]);
   });
 
+  it("zeigt die Quintole aus ZicZac, Vers 1, Takt 3", () => {
+    const zahlen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "toleZahl");
+    expect(zahlen.map((z) => z.text)).toEqual(["5"]);
+  });
+
   it("laesst sich spielen", () => {
     expect(abspielplan(uebungsmarsch, 100).length).toBeGreaterThan(0);
   });
