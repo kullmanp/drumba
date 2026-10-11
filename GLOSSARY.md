@@ -128,8 +128,20 @@ Always drawn **downward**, whichever side of the Notenlinie its Notenkopf sits o
 every Hals of a group reaches the same Balken.
 
 **Balken**:
-A beam joining the Hälse of Schläge that fall on the same Zählzeit. It runs **below** the
-Notenlinie, at the lower end of the Hälse.
+A beam joining the Hälse of a **Balkengruppe**. It runs **below** the Notenlinie, at the lower
+end of the Hälse. The first Balken spans the whole group; each further Balken spans a run of
+consecutive Schläge short enough to need it — a second for Sechzehntel, a third for
+Zweiunddreissigstel.
+
+**Balkengruppe**:
+The Schläge joined by one set of Balken. By default the Schläge of one Zählzeit — a quarter in
+2/4, a dotted quarter in 6/8 — and they may mix values. Regrouping is the author's choice; that
+choice is not modelled yet.
+
+**Balkenstummel**:
+A short stub of Balken for a Schlag that needs a further Balken its neighbours lack — the lone
+Sechzehntel beside an Achtel. It points into its Balkengruppe: right on the group's first
+Schlag, left on any other.
 
 **Fahne**:
 The hook on the lower end of a Hals, for a Schlag short enough to need one but not beamed to a
