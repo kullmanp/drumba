@@ -138,6 +138,9 @@ The grace stroke of a Schlepp, played with the other Hand. Not written as a note
 short **vertical line rising from the Notenkopf** of the Schlag it belongs to. Because it hangs
 off the head rather than standing beside it, it carries no Hand height — the reader infers the
 Vorschlag's Hand from the Schlepp's.
+Played softer than the main stroke and a short, fixed moment *before* it, so the main stroke
+still falls on the Schlag's position. That moment is a gesture, not a rhythmic value: it does
+not shrink or grow with Tempo.
 
 **Wirbel** (deferred):
 The mark that shows a **Ruf** is one figure rather than its constituent strokes. Not a bracket
@@ -147,7 +150,9 @@ the exact drawing is unsettled and deferred with the Ruf.
 ### Interpretation
 
 **Tempo**:
-Playback speed of a Marsch. A property of the Marsch, overridable per playback.
+Playback speed of a Marsch, counted in **Zählzeiten per minute**. The pulse holds across a
+change of Taktart: a dotted quarter in 6/8 lasts as long as a quarter in 2/4, and the Achtel
+move instead. A property of the Marsch, overridable per playback.
 
 **Vortrag**:
 The Basel-idiomatic feel applied in playback — at minimum a named feel plus a swing ratio.
