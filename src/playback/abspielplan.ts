@@ -45,7 +45,13 @@ export interface Anschlag {
 export const VORSCHLAG_VORLAUF = 0.03;
 
 /** Der Vorschlag klingt deutlich leiser als der Hauptschlag. Nach Gehoer gewaehlt. */
-const VORSCHLAG_LAUTSTAERKE = 0.5;
+const VORSCHLAG_LAUTSTAERKE = 0.3;
+
+/**
+ * Die leise Dupfe eines Doubles: lauter als der Vorschlag, leiser als der
+ * Hauptschlag. Nach Gehoer gewaehlt.
+ */
+const LEISE_DUPFE_LAUTSTAERKE = 0.5;
 
 /**
  * Die Schlaege, die eine Figur klingen laesst: Hand und Versatz in Ganzen ab
@@ -88,7 +94,15 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
     for (const schlag of takt.schlaege) {
       const zeitpunkt = (versatz: Bruch): number =>
         sekunden(addiere(beginn, dividiere(addiere(schlag.position, versatz), zaehlzeitLaenge)));
-      if (FIGURMERKMALE[schlag.figur].vorschlag) {
+      const merkmale = FIGURMERKMALE[schlag.figur];
+      if (merkmale.leiseDupfe) {
+        anschlaege.push({
+          zeit: zeitpunkt(subtrahiere(NULL, merkmale.leiseDupfe.vorlauf)),
+          hand: schlag.hand,
+          lautstaerke: LEISE_DUPFE_LAUTSTAERKE,
+        });
+      }
+      if (merkmale.vorschlag) {
         anschlaege.push({
           zeit: zeitpunkt(NULL) - VORSCHLAG_VORLAUF,
           hand: andereHand(schlag.hand),

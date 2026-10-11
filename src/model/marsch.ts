@@ -21,8 +21,10 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * Von der Ruf-Familie steht erst der Fuenferruf (mit Schlepp) hier. Er fuellt
  * genau eine Achtel; seine Landung ist nicht Teil von ihm, sondern der naechste
  * Schlag (ADR-0002) — `pruefeMarsch` stellt sicher, dass sie da ist.
+ *
+ * `Double` ist das Double des Glossars, in ASCII geschrieben.
  */
-export type Figur = "Dupfe" | "Schlepp" | "Fuenferruf";
+export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf";
 
 /** Was eine Figur ausmacht, an einer Stelle — Layout und Wiedergabe lesen beide hier. */
 export interface Figurmerkmale {
@@ -30,11 +32,20 @@ export interface Figurmerkmale {
   readonly vorschlag: boolean;
   /** Bei einem Ruf: wie viele Schlaege er zaehlt, die Landung eingerechnet. */
   readonly ruf?: { readonly schlaege: number };
+  /**
+   * Bei einem Double: die leise Dupfe in der Hand des Schlags, `vorlauf` (in
+   * Ganzen) vor ihm. Ein Notenwert, keine Geste — sie waechst mit dem Tempo. Wie
+   * der Vorschlag gehoert sie zur Figur und nimmt im Takt keinen Platz ein; sie
+   * darf vor den vorigen Schlag, in den vorigen Takt oder vor den Marsch fallen.
+   */
+  readonly leiseDupfe?: { readonly vorlauf: Bruch };
 }
 
 export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
   Dupfe: { vorschlag: false },
   Schlepp: { vorschlag: true },
+  // Ein Schlepp mit einer leisen Dupfe eine Sechzehntel davor.
+  Double: { vorschlag: true, leiseDupfe: { vorlauf: bruch(1, 16) } },
   // Der Fuenferruf beginnt mit einem Schlepp und hat darum dessen Vorschlag.
   Fuenferruf: { vorschlag: true, ruf: { schlaege: 5 } },
 };

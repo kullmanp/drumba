@@ -455,3 +455,20 @@ describe("folgeschlag aus dem Auftakt", () => {
     });
   });
 });
+
+describe("pruefeMarsch: Double", () => {
+  it("laesst einen Takt gelten, den Doubles mit ihren Werten fuellen", () => {
+    const m = zweiViertel([
+      pause([0, 1], [1, 8]),
+      schlag("Double", "links", [1, 8], [1, 8]),
+      schlag("Double", "rechts", [1, 4], [1, 8]),
+      schlag("Double", "links", [3, 8], [1, 8]),
+    ]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("laesst ein Double auf dem Beginn von Takt 1 gelten, obwohl seine Dupfe davor faellt", () => {
+    const m = zweiViertel([schlag("Double", "rechts", [0, 1], [2, 4])]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+});

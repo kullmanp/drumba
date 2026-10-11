@@ -1,6 +1,6 @@
 # 01 — The Doublé in the model and in playback
 
-Status: ready-for-agent
+Status: done
 Type: task
 
 Spec: `.scratch/double/spec.md` — Model, Playback.

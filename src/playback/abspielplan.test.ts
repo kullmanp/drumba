@@ -155,6 +155,68 @@ describe("Schlepp", () => {
   });
 });
 
+describe("Double", () => {
+  /**
+   * Ein Takt in `taktart`: eine Viertel Dupfe vorweg, damit die leise Dupfe
+   * nicht vor den Anfang faellt, dann ein Double links auf der zweiten Viertel.
+   */
+  const mitDouble = (taktart: [number, number], pausen: Pause[] = []): Marsch =>
+    marsch(
+      vers(taktart, 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+          schlag("Double", "links", [1, 4], [1, 8]),
+        ],
+        pausen: [pause([3, 8], [1, 8]), ...pausen],
+      }),
+    );
+
+  it("spielt eine leise Dupfe, einen Vorschlag und den Hauptschlag", () => {
+    const [, leiseDupfe, vorschlag, hauptschlag] = abspielplan(mitDouble([2, 4]), 60);
+
+    expect(hauptschlag).toEqual({ zeit: 1, hand: "links", lautstaerke: 1 });
+    expect(vorschlag!.hand).toBe("rechts");
+    expect(leiseDupfe!.hand).toBe("links");
+  });
+
+  it("setzt die leise Dupfe genau eine Sechzehntel vor den Hauptschlag, in 2/4", () => {
+    // Tempo 60 in 2/4: eine Viertel dauert 1 s, eine Sechzehntel also 0.25 s.
+    const [, leiseDupfe, , hauptschlag] = abspielplan(mitDouble([2, 4]), 60);
+
+    expect(hauptschlag!.zeit - leiseDupfe!.zeit).toBeCloseTo(0.25, 9);
+  });
+
+  it("setzt die leise Dupfe genau eine Sechzehntel vor den Hauptschlag, in 6/8", () => {
+    // Tempo 60 in 6/8: eine punktierte Viertel dauert 1 s, eine Sechzehntel 1/6 s.
+    const m = mitDouble([6, 8], [pause([1, 2], [1, 4])]);
+    const [, leiseDupfe, , hauptschlag] = abspielplan(m, 60);
+
+    expect(hauptschlag!.zeit - leiseDupfe!.zeit).toBeCloseTo(1 / 6, 9);
+  });
+
+  it("laesst die leise Dupfe lauter klingen als den Vorschlag und leiser als den Hauptschlag", () => {
+    const [, leiseDupfe, vorschlag, hauptschlag] = abspielplan(mitDouble([2, 4]), 60);
+
+    expect(leiseDupfe!.lautstaerke).toBeGreaterThan(vorschlag!.lautstaerke);
+    expect(leiseDupfe!.lautstaerke).toBeLessThan(hauptschlag!.lautstaerke);
+  });
+
+  it("laesst die leise Dupfe eines Doubles am Anfang vor die Zeit null fallen", () => {
+    const m = marsch(vers([2, 4], 1, { schlaege: [schlag("Double", "rechts", [0, 1], [2, 4])] }));
+    const [leiseDupfe, , hauptschlag] = abspielplan(m, 100);
+
+    expect(leiseDupfe!.zeit).toBeLessThan(0);
+    expect(leiseDupfe!.hand).toBe("rechts");
+    expect(hauptschlag!.zeit).toBe(0);
+  });
+
+  it("gibt einem Schlepp keine leise Dupfe", () => {
+    const m = marsch(vers([2, 4], 1, { schlaege: [schlag("Schlepp", "rechts", [0, 1], [2, 4])] }));
+
+    expect(abspielplan(m, 100)).toHaveLength(2);
+  });
+});
+
 describe("Fuenferruf", () => {
   /** Ein 2/4-Takt: Fuenferruf in `hand` auf der ersten Achtel, Landung auf der zweiten. */
   const mitRuf = (hand: Hand): Marsch =>
