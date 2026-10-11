@@ -102,9 +102,10 @@ Auto-filling by the alternation rule is an authoring convenience, not a gap in t
 **Ruf**:
 The family of measured rolls, counted by their number of strokes — the repertoire uses 3, 5,
 7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
-strokes; its last stroke is the **Landung**, a Schlag of its own, and always a Dupfe. Only the **Fünferruf** is
-modelled so far. The traditional "Vierer" and "Achter" are not Rufe of their own but a
-Dreierruf and a Siebnerruf with a **Nachschlag**.
+strokes; its last stroke is the **Landung**, a Schlag of its own, and always a Dupfe. Only the
+**Fünferruf**, the **Dreierruf** and the **Siebnerruf** are modelled so far. The traditional
+"Vierer" and "Achter" are not Rufe of their own but a Dreierruf and a Siebnerruf with a
+**Nachschlag**.
 
 **Fünferruf** (mit Schlepp):
 The most common Ruf. Five strokes: Schlepp rechts, Dupfe rechts, Dupfe links, Dupfe links,
@@ -114,6 +115,14 @@ played faster than in 2/4. Practically always played starting rechts; the mirror
 starting links is rare and hard to play, but legitimate. Written as a Schlepp whose Hals
 carries a Wirbel, with a "5" and a slur to the fifth stroke.
 A **Fünferruf ohne Schlepp** (no Vorschlag on the first stroke) also exists; deferred.
+
+**Siebnerruf**:
+Seven strokes: six rolled in pairs, then the Landung in the other Hand — links, links, rechts,
+rechts, links, links, rechts, or the mirror. No Schlepp on the first stroke. The six strokes
+are evenly spaced and fill exactly a punktierte Achtel, so they come as fast as a Fünferruf's.
+Written like a Fünferruf without its Vorschlag: a dotted head whose Hals carries a Wirbel,
+with a "7" and a slur to the Landung. A Siebnerruf mit Schlepp, and the Siebnerruf mit
+Nachschlag (the traditional Achterruf), are variants not yet settled.
 
 **Dreierruf**:
 Three strokes: two in one Hand, then the Landung in the other — rechts, rechts, links or the
@@ -219,7 +228,8 @@ the Landung falls in the next Takt. Part of the **Wirbel**.
 
 **Landung**:
 The last stroke of a Ruf — the Schlag the roll lands on. It is a Schlag of its own, with its
-own Notenkopf, value and Balken, played with the Hand the Ruf started with. It may fall in the
+own Notenkopf, value and Balken, played in the Hand its Ruf calls for — the Hand the Ruf started
+with for a Fünferruf, the other for a Dreierruf or a Siebnerruf. It may fall in the
 next Takt, across the Taktstrich.
 _Avoid_: landing note, Endschlag.
 
