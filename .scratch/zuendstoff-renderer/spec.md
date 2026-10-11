@@ -1,6 +1,6 @@
 # Zündstoffnoten renderer — first iteration
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -180,3 +180,26 @@ the glossary exactly is worth more than ASCII purity.
 The full Basel figure vocabulary is coming from the user later. The three Figuren here are
 seeds; the design should make adding twenty more a matter of extending a set and adding
 geometry, not restructuring the model.
+
+## Comments
+
+**Closed 2026-10-11.** Built across `234fe87`, `ff09d25` and `8d27bcf`. Where the result departs
+from the spec above, the spec was wrong about the notation, and `CONTEXT.md` now holds the
+corrected terms:
+
+- **Notenköpfe, not matchsticks.** Checked against real scores (ZicZac, Colonel Bogey March),
+  a Schlag is a filled Notenkopf with its Hals hanging down and Balken below the Notenlinie.
+  User story 3's "matchstick note" is superseded.
+- **No hand indicators.** The Hand is the height of the Notenkopf — rechts above the line,
+  links below. User story 6 is met by that height; the `r`/`l` letters were removed.
+- **Schlepp.** The Vorschlag is a short vertical line rising from the Notenkopf, not a grace
+  note beside it.
+- **Fünferruf deferred.** User story 5 and the "roll span" coverage were not built. Rolls are a
+  family (3, 5, 7, 9, 11, 15 strokes) and the originals slash the Hals and slur to the landing
+  Schlag; how to write that is undecided. `Figur` is `Dupfe | Schlepp` until it is, and the
+  Übungsmarsch's two Rufe became a Schlepp and a Dupfe. Next: grill Ruf / Wirbel notation.
+- **Added beyond the spec:** Punkte for dotted values, and `UngleicheBalkengruppeError` for a
+  Balkengruppe of unequal values (Balkenstummel are not built yet).
+- **Glyph geometry** is measured against `2006Trommelfont`, the STPV's own font. The Vorschlag
+  stroke weight and the Wiederholungsklammer dimensions are still placeholders — the measured
+  excerpt contains neither.
