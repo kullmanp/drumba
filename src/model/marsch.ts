@@ -1,5 +1,5 @@
 import type { Bruch } from "./bruch";
-import { addiere, bruch, NULL, subtrahiere, vergleiche } from "./bruch";
+import { addiere, bruch, dividiere, multipliziere, NULL, subtrahiere, vergleiche } from "./bruch";
 
 /**
  * Das kanonische Modell (ADR-0001). Es haelt alles, was Zuendstoffnoten sagen
@@ -85,6 +85,12 @@ export interface Taktart {
 /** Ein Vers: ein Abschnitt des Marsches mit eigener Wiederholungszahl. */
 export interface Vers {
   readonly taktart: Taktart;
+  /**
+   * Der Auftakt vor dem ersten Takt, falls es einen gibt — das Ende eines Taktes
+   * der Taktart des Verses (ADR-0003): seine Schlaege und Pausen stehen auf den
+   * Positionen, die sie in einem vollen Takt haetten.
+   */
+  readonly auftakt?: Takt;
   /** Wie oft der Vers gespielt wird: 2 (wiederholt) oder 1. */
   readonly wiederholungen: 1 | 2;
   readonly takte: readonly Takt[];
@@ -98,6 +104,30 @@ export interface Marsch {
 
 /** Die Laenge eines Taktes in Ganzen: 6/8 misst 3/4. */
 export const taktLaenge = (taktart: Taktart): Bruch => bruch(taktart.zaehler, taktart.nenner);
+
+/**
+ * Der Taktindex, unter dem der Auftakt eines Verses steht: einer vor dem ersten
+ * Takt. So fuehrt der Schritt zum naechsten Takt aus dem Auftakt in Takt 1, wie
+ * aus jedem Takt in den folgenden.
+ *
+ * Nur ueber `taktAn` aufloesen: `vers.takte[AUFTAKT]` ist `undefined`, und
+ * `vers.takte.at(AUFTAKT)` gaebe still den letzten Takt. Wer platzierte oder
+ * gespielte Takte in einer eigenen Liste haelt, braucht fuer den Auftakt einen
+ * eigenen Platz daneben.
+ */
+export const AUFTAKT = -1;
+
+/** Der Takt unter einem Taktindex — der Auftakt unter `AUFTAKT`. */
+export const taktAn = (vers: Vers, taktIndex: number): Takt | undefined =>
+  taktIndex === AUFTAKT ? vers.auftakt : vers.takte[taktIndex];
+
+/**
+ * Wo der Auftakt beginnt: bei seinem ersten Schlag, auf dessen Position in einem
+ * vollen Takt. Er dauert von dort bis zum Taktende. Wie in jedem Takt sind die
+ * Schlaege nach Position geordnet; stehen sie es nicht, faellt das als
+ * Ueberlappung in der Pruefung auf.
+ */
+export const auftaktBeginn = (auftakt: Takt): Bruch => auftakt.schlaege[0]?.position ?? NULL;
 
 /** Was einen Takt fuellt: seine Schlaege und seine Pausen, in einer Liste. */
 const elemente = (takt: Takt): (Schlag | Pause)[] => [...takt.schlaege, ...takt.pausen];
@@ -202,6 +232,10 @@ const istZusammengesetzt = (taktart: Taktart): boolean =>
 export const zaehlzeit = (taktart: Taktart): Bruch =>
   istZusammengesetzt(taktart) ? bruch(3, taktart.nenner) : bruch(1, taktart.nenner);
 
+/** Wo im Marsch etwas steht, fuer Fehlermeldungen: Takt 0 ist der Auftakt. */
+const ort = (versNummer: number, taktNummer: number): string =>
+  taktNummer === 0 ? `Vers ${versNummer}, Auftakt` : `Vers ${versNummer}, Takt ${taktNummer}`;
+
 /**
  * Ein Ruf ohne gueltige Landung: kein Schlag danach, keiner genau eine Achtel
  * spaeter oder einer in der falschen Hand. Ein Ruf, der nirgends landet, wird
@@ -210,17 +244,101 @@ export const zaehlzeit = (taktart: Taktart): Bruch =>
 export class UngueltigerRufError extends Error {
   constructor(
     readonly versNummer: number,
+    /** Ab 1 gezaehlt; 0 ist der Auftakt. */
     readonly taktNummer: number,
     readonly schlag: Schlag,
   ) {
     super(
-      `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} ${schlag.hand} auf ` +
+      `${ort(versNummer, taktNummer)}: ${schlag.figur} ${schlag.hand} auf ` +
         `${schlag.position.zaehler}/${schlag.position.nenner} hat keine Landung ` +
         `eine Achtel spaeter in derselben Hand`,
     );
     this.name = "UngueltigerRufError";
   }
 }
+
+/**
+ * Ein Auftakt, der nicht gezeichnet oder gespielt werden kann: leer, mit einer
+ * Pause vorne, so lang wie ein ganzer Takt, nicht lueckenlos — oder einer, der
+ * bei der Rueckkehr zu Takt 1 ueber einen klingenden Schlag gespielt wuerde.
+ */
+export class UngueltigerAuftaktError extends Error {
+  constructor(
+    readonly versNummer: number,
+    grund: string,
+  ) {
+    super(`Vers ${versNummer}, Auftakt: ${grund}`);
+    this.name = "UngueltigerAuftaktError";
+  }
+}
+
+const alsText = (b: Bruch): string => `${b.zaehler}/${b.nenner}`;
+
+/**
+ * Prueft den Auftakt eines Verses fuer sich: er hat Schlaege, beginnt mit einem,
+ * ist kuerzer als ein Takt und fuellt die Strecke von seinem Beginn bis zum
+ * Taktende lueckenlos.
+ */
+const pruefeAuftaktForm = (auftakt: Takt, taktart: Taktart, versNummer: number): void => {
+  const fehler = (grund: string) => new UngueltigerAuftaktError(versNummer, grund);
+  if (auftakt.schlaege.length === 0) throw fehler("hat keinen Schlag");
+  const beginn = auftaktBeginn(auftakt);
+  if (auftakt.pausen.some((pause) => vergleiche(pause.position, beginn) < 0)) {
+    throw fehler("beginnt mit einer Pause statt mit einem Schlag");
+  }
+  if (vergleiche(beginn, NULL) <= 0) throw fehler("ist so lang wie ein ganzer Takt");
+  const ueberlauf = taktUeberlauf(auftakt, taktart);
+  if (ueberlauf) {
+    throw fehler(
+      `${benenne(ueberlauf)} auf ${alsText(ueberlauf.position)} passt nicht in den Takt`,
+    );
+  }
+  const luecke = fuellfehler(auftakt, beginn, taktLaenge(taktart));
+  if (luecke) throw fehler(`${luecke.art} auf ${alsText(luecke.stelle)}`);
+};
+
+/**
+ * Prueft, dass der Auftakt eines Verses ueberall, wo er wieder erklingt, nur
+ * ueber Pausen faellt (ADR-0003): ueber das Ende des eigenen letzten Taktes bei
+ * der Wiederholung, und ueber das Ende des letzten Taktes des vorigen Verses.
+ *
+ * Gemessen wird in Zaehlzeiten, denn das Tempo haelt den Puls ueber einen
+ * Wechsel der Taktart: ein Auftakt von einer halben Zaehlzeit in 2/4 deckt die
+ * letzte halbe Zaehlzeit eines 6/8-Taktes, also 3/16.
+ */
+const pruefeAuftaktWiederkehr = (marsch: Marsch, versIndex: number): void => {
+  const vers = marsch.verse[versIndex]!;
+  const auftakt = vers.auftakt!;
+  const zaehlzeiten = dividiere(
+    subtrahiere(taktLaenge(vers.taktart), auftaktBeginn(auftakt)),
+    zaehlzeit(vers.taktart),
+  );
+  const wiederkehrIn = [
+    ...(vers.wiederholungen === 2 ? [versIndex] : []),
+    ...(versIndex > 0 ? [versIndex - 1] : []),
+  ];
+  for (const zielIndex of wiederkehrIn) {
+    const ziel = marsch.verse[zielIndex]!;
+    const letzter = ziel.takte.at(-1);
+    // Ein Vers ohne Takte hat keinen Schluss, ueber den der Auftakt fallen koennte.
+    if (!letzter) continue;
+    const ende = taktLaenge(ziel.taktart);
+    const beginn = subtrahiere(ende, multipliziere(zaehlzeiten, zaehlzeit(ziel.taktart)));
+    const wo = `im letzten Takt von Vers ${zielIndex + 1}`;
+    if (vergleiche(beginn, NULL) < 0) {
+      throw new UngueltigerAuftaktError(versIndex + 1, `ist laenger als der letzte Takt ${wo}`);
+    }
+    const klingend = letzter.schlaege.find(
+      (schlag) => vergleiche(addiere(schlag.position, schlag.wert), beginn) > 0,
+    );
+    if (klingend) {
+      throw new UngueltigerAuftaktError(
+        versIndex + 1,
+        `faellt ${wo} ab ${alsText(beginn)} ueber den Schlag auf ${alsText(klingend.position)}`,
+      );
+    }
+  }
+};
 
 /** Wie lange ein Fuenferruf von seinem Schlepp bis zur Landung dauert. */
 export const FUENFERRUF_DAUER = bruch(1, 8);
@@ -239,8 +357,12 @@ export interface Folgeschlag {
 
 /**
  * Der Schlag nach dem `index`-ten des Taktes `taktIndex` — im selben Takt oder
- * als erster des naechsten. Ueber das Ende des Verses hinaus sucht er nicht:
- * eine Landung im naechsten Vers oder in der Wiederholung gibt es noch nicht.
+ * als erster des naechsten, aus dem Auftakt (`AUFTAKT`) also in Takt 1. Ueber
+ * das Ende des Verses hinaus sucht er nicht: eine Landung im naechsten Vers
+ * oder in der Wiederholung gibt es noch nicht.
+ *
+ * Der Abstand ueber den Taktstrich geht bis zum Taktende und von dort weiter;
+ * das gilt auch fuer den Auftakt, dessen Positionen die eines vollen Taktes sind.
  *
  * Die eine Stelle, die sagt, wo ein Ruf landet: `pruefeMarsch` prueft daran die
  * Landung, das Layout zieht den Bogen dorthin.
@@ -250,7 +372,7 @@ export const folgeschlag = (
   taktIndex: number,
   index: number,
 ): Folgeschlag | undefined => {
-  const schlaege = vers.takte[taktIndex]!.schlaege;
+  const schlaege = taktAn(vers, taktIndex)!.schlaege;
   const schlag = schlaege[index]!;
   const imTakt = schlaege[index + 1];
   if (imTakt) {
@@ -262,7 +384,7 @@ export const folgeschlag = (
     };
   }
 
-  const imNaechsten = vers.takte[taktIndex + 1]?.schlaege[0];
+  const imNaechsten = taktAn(vers, taktIndex + 1)?.schlaege[0];
   if (!imNaechsten) return undefined;
   const bisTaktende = subtrahiere(taktLaenge(vers.taktart), schlag.position);
   return {
@@ -273,13 +395,29 @@ export const folgeschlag = (
   };
 };
 
+/** Wirft, wenn der Ruf an dieser Stelle keine gueltige Landung hat. */
+const pruefeLandung = (vers: Vers, versIndex: number, taktIndex: number, index: number): void => {
+  const schlag = taktAn(vers, taktIndex)!.schlaege[index]!;
+  if (!FIGURMERKMALE[schlag.figur].ruf) return;
+  const landung = folgeschlag(vers, taktIndex, index);
+  if (
+    !landung ||
+    vergleiche(landung.abstand, FUENFERRUF_DAUER) !== 0 ||
+    landung.schlag.hand !== schlag.hand
+  ) {
+    throw new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag);
+  }
+};
+
 /**
  * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jeder Takt passt
- * in seine Taktart und wird von seinen Schlaegen und Pausen genau gefuellt, und
+ * in seine Taktart und wird von seinen Schlaegen und Pausen genau gefuellt, ein
+ * Auftakt hat seine Form und faellt beim Wiedererklingen nur ueber Pausen, und
  * jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
  */
 export const pruefeMarsch = (marsch: Marsch): void => {
   marsch.verse.forEach((vers, versIndex) => {
+    if (vers.auftakt) pruefeAuftaktForm(vers.auftakt, vers.taktart, versIndex + 1);
     vers.takte.forEach((takt, taktIndex) => {
       const ueberlauf = taktUeberlauf(takt, vers.taktart);
       if (ueberlauf) {
@@ -287,17 +425,13 @@ export const pruefeMarsch = (marsch: Marsch): void => {
       }
       const fehler = fuellfehler(takt, NULL, taktLaenge(vers.taktart));
       if (fehler) throw new LueckenhafterTaktError(versIndex + 1, taktIndex + 1, fehler);
-      takt.schlaege.forEach((schlag, index) => {
-        if (!FIGURMERKMALE[schlag.figur].ruf) return;
-        const landung = folgeschlag(vers, taktIndex, index);
-        if (
-          !landung ||
-          vergleiche(landung.abstand, FUENFERRUF_DAUER) !== 0 ||
-          landung.schlag.hand !== schlag.hand
-        ) {
-          throw new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag);
-        }
-      });
     });
+    // Erst wenn alle Takte stehen: der Auftakt kehrt ueber den letzten Takt
+    // wieder, und ein Ruf im Auftakt landet in Takt 1.
+    if (vers.auftakt) pruefeAuftaktWiederkehr(marsch, versIndex);
+    vers.auftakt?.schlaege.forEach((_, index) => pruefeLandung(vers, versIndex, AUFTAKT, index));
+    vers.takte.forEach((takt, taktIndex) =>
+      takt.schlaege.forEach((_, index) => pruefeLandung(vers, versIndex, taktIndex, index)),
+    );
   });
 };

@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "./bruch";
-import type { Figur, Hand, Marsch, Pause, Schlag, Takt } from "./marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "./marsch";
 import {
   andereHand,
+  AUFTAKT,
   folgeschlag,
   LueckenhafterTaktError,
   pruefeMarsch,
   taktLaenge,
   taktUeberlauf,
+  UngueltigerAuftaktError,
   UngueltigerRufError,
   zaehlzeit,
 } from "./marsch";
@@ -44,6 +46,41 @@ const dupfe = (position: [number, number], wert: [number, number]): Schlag => ({
   position: bruch(...position),
   wert: bruch(...wert),
 });
+
+/** Ein Vers mit Auftakt; `auftakt` und jeder Takt als gemischte Liste hingeschrieben. */
+const versMitAuftakt = (
+  taktart: [number, number],
+  wiederholungen: 1 | 2,
+  auftakt: (Schlag | Pause)[],
+  ...takte: (Schlag | Pause)[][]
+): Vers => ({
+  taktart: { zaehler: taktart[0], nenner: taktart[1] },
+  wiederholungen,
+  auftakt: takt(auftakt),
+  takte: takte.map(takt),
+});
+
+/** Ein Vers ohne Auftakt, in beliebiger Taktart. */
+const ohneAuftakt = (
+  taktart: [number, number],
+  wiederholungen: 1 | 2,
+  ...takte: (Schlag | Pause)[][]
+): Vers => ({
+  taktart: { zaehler: taktart[0], nenner: taktart[1] },
+  wiederholungen,
+  takte: takte.map(takt),
+});
+
+const marschAus = (...verse: Vers[]): Marsch => ({ titel: "Test", verse });
+
+/** Ein 2/4-Takt, der auf Viertel und Viertelpause endet — Platz fuer einen Auftakt. */
+const endetMitPause = (): (Schlag | Pause)[] => [dupfe([0, 1], [1, 4]), pause([1, 4], [1, 4])];
+
+/** Ein 2/4-Takt aus zwei klingenden Vierteln — kein Platz fuer einen Auftakt. */
+const endetKlingend = (): (Schlag | Pause)[] => [dupfe([0, 1], [1, 4]), dupfe([1, 4], [1, 4])];
+
+/** Der Auftakt aus ZicZac, Vers 1: ein freier Fuenferruf rechts auf der letzten Achtel. */
+const rufAuftakt = (): (Schlag | Pause)[] => [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])];
 
 // --- Tests -----------------------------------------------------------------
 
@@ -283,5 +320,138 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
     );
     expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
     expect(() => pruefeMarsch(m)).toThrow(/Vers 1.*Takt 2/);
+  });
+});
+
+describe("pruefeMarsch: Auftakt", () => {
+  it("laesst einen Ruf-Auftakt gelten, der in Takt 1 landet und bei der Wiederholung ueber eine Pause faellt", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 2, rufAuftakt(), endetMitPause()));
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft einen Auftakt ohne Schlag", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 1, [pause([3, 8], [1, 8])], endetMitPause()));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+  });
+
+  it("verwirft einen Auftakt, der mit einer Pause beginnt", () => {
+    const m = marschAus(
+      versMitAuftakt([2, 4], 1, [pause([1, 4], [1, 8]), dupfe([3, 8], [1, 8])], endetMitPause()),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+  });
+
+  it("verwirft einen Auftakt, der so lang ist wie ein ganzer Takt", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 1, endetKlingend(), endetMitPause()));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+  });
+
+  it("verwirft einen Auftakt, der nicht lueckenlos bis zum Taktende reicht", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 1, [dupfe([1, 4], [1, 16])], endetMitPause()));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Luecke auf 5\/16/);
+  });
+
+  it("verwirft einen Auftakt, der bei der Wiederholung ueber einen klingenden Schlag fiele", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 2, [dupfe([3, 8], [1, 8])], endetKlingend()));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+  });
+
+  it("prueft den eigenen letzten Takt nicht, wenn der Vers nicht wiederholt wird", () => {
+    const m = marschAus(versMitAuftakt([2, 4], 1, [dupfe([3, 8], [1, 8])], endetKlingend()));
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft einen Auftakt, der ueber den klingenden Schluss des vorigen Verses fiele", () => {
+    const m = marschAus(
+      ohneAuftakt([2, 4], 1, endetKlingend()),
+      versMitAuftakt([2, 4], 1, [dupfe([3, 8], [1, 8])], endetMitPause()),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 2, Auftakt.*Vers 1/);
+  });
+
+  it("laesst einen Auftakt ueber die Schlusspause des vorigen Verses gelten", () => {
+    const m = marschAus(
+      ohneAuftakt([2, 4], 1, endetMitPause()),
+      versMitAuftakt([2, 4], 1, [dupfe([3, 8], [1, 8])], endetMitPause()),
+    );
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft einen Auftakt, der laenger ist als der letzte Takt des vorigen Verses", () => {
+    // Anderthalb Zaehlzeiten Auftakt nach einem 1/4-Takt von einer einzigen.
+    const m = marschAus(
+      ohneAuftakt([1, 4], 1, [pause([0, 1], [1, 4])]),
+      versMitAuftakt([2, 4], 1, [dupfe([1, 8], [3, 8])], endetMitPause()),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/laenger/);
+  });
+
+  it("meldet einen kaputten letzten Takt als solchen, nicht als Fehler des Auftakts", () => {
+    const m = marschAus(
+      versMitAuftakt([2, 4], 2, [dupfe([3, 8], [1, 8])], [dupfe([0, 1], [1, 4])]),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+  });
+
+  describe("ueber einen Wechsel der Taktart, in Zaehlzeiten gemessen", () => {
+    // Eine Achtel in 2/4 ist eine halbe Zaehlzeit; in 6/8 sind das 3/16, mehr als eine Achtel.
+    const nachSechsAchtel = (schluss: (Schlag | Pause)[]): Marsch =>
+      marschAus(
+        ohneAuftakt([6, 8], 1, schluss),
+        versMitAuftakt([2, 4], 1, [dupfe([3, 8], [1, 8])], endetMitPause()),
+      );
+
+    it("verwirft ihn, wenn die Schlusspause kuerzer ist als seine Zaehlzeiten", () => {
+      const m = nachSechsAchtel([
+        dupfe([0, 1], [3, 8]),
+        dupfe([3, 8], [1, 4]),
+        pause([5, 8], [1, 8]),
+      ]);
+      expect(() => pruefeMarsch(m)).toThrow(UngueltigerAuftaktError);
+    });
+
+    it("laesst ihn gelten, wenn die Schlusspause seine Zaehlzeiten deckt", () => {
+      const m = nachSechsAchtel([dupfe([0, 1], [3, 8]), pause([3, 8], [3, 8])]);
+      expect(() => pruefeMarsch(m)).not.toThrow();
+    });
+  });
+
+  it("verwirft einen Ruf im Auftakt, dessen Landung in Takt 1 in der falschen Hand liegt", () => {
+    const takt1: (Schlag | Pause)[] = [
+      schlag("Dupfe", "links", [0, 1], [1, 4]),
+      pause([1, 4], [1, 4]),
+    ];
+    const m = marschAus(versMitAuftakt([2, 4], 1, rufAuftakt(), takt1));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Auftakt/);
+  });
+
+  it("verwirft einen Ruf im Auftakt, der nicht eine Achtel vor Takt 1 steht", () => {
+    const m = marschAus(
+      versMitAuftakt(
+        [2, 4],
+        1,
+        [schlag("Fuenferruf", "rechts", [1, 4], [1, 8]), pause([3, 8], [1, 8])],
+        endetMitPause(),
+      ),
+    );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Auftakt/);
+  });
+});
+
+describe("folgeschlag aus dem Auftakt", () => {
+  it("findet den ersten Schlag von Takt 1, ueber den Taktstrich gemessen", () => {
+    const vers = versMitAuftakt([2, 4], 1, rufAuftakt(), endetMitPause());
+
+    expect(folgeschlag(vers, AUFTAKT, 0)).toEqual({
+      schlag: vers.takte[0]!.schlaege[0],
+      abstand: bruch(1, 8),
+      taktIndex: 0,
+      index: 0,
+    });
   });
 });
