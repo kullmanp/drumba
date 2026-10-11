@@ -421,6 +421,76 @@ describe("Schlepp", () => {
   });
 });
 
+describe("Double", () => {
+  /** Ein 2/4-Takt: `figur` rechts als freie Achtel, dann Achtelpause und Viertel. */
+  const anStelle = (figur: Figur): Marsch =>
+    marsch(
+      "Figur",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag(figur, "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+        pausen: [pause([1, 8], [1, 8])],
+      }),
+    );
+
+  const fahnenAmVorschlag = (m: Marsch): GlyphVom<"fahne">[] =>
+    glyphen(m, "fahne").filter((f) => f.haengtAn === "vorschlag");
+
+  it("zeichnet alles, was ein Schlepp an derselben Stelle hat, und eine Fahne dazu", () => {
+    const schlepp = layout(anStelle("Schlepp")).glyphen;
+    const double = layout(anStelle("Double")).glyphen;
+
+    expect(double).toEqual(expect.arrayContaining([...schlepp]));
+    expect(double).toHaveLength(schlepp.length + 1);
+    expect(fahnenAmVorschlag(anStelle("Double"))).toHaveLength(1);
+  });
+
+  it("haengt die Fahne an das obere Ende des Vorschlags", () => {
+    const m = anStelle("Double");
+    const [fahne] = fahnenAmVorschlag(m);
+    const vorschlag = glyphen(m, "vorschlag")[0]!;
+
+    expect(fahne!.x).toBeCloseTo(vorschlag.x, 10);
+    expect(fahne!.y).toBeCloseTo(vorschlag.yOben, 10);
+    expect(fahne!.anzahl).toBe(1);
+  });
+
+  it("gibt einem Schlepp und einer Dupfe keine Fahne am Vorschlag", () => {
+    expect(fahnenAmVorschlag(anStelle("Schlepp"))).toEqual([]);
+    expect(fahnenAmVorschlag(anStelle("Dupfe"))).toEqual([]);
+  });
+
+  it("traegt die Fahne als Achtel, als Sechzehntel und gebalkt gleich", () => {
+    const sechzehntel = marsch(
+      "Sechzehntel",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Double", "rechts", [0, 1], [1, 16]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+        pausen: [pause([1, 16], [1, 16]), pause([1, 8], [1, 8])],
+      }),
+    );
+    const gebalkt = marsch(
+      "Gebalkt",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Double", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 8], [1, 8]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 4]),
+        ],
+      }),
+    );
+
+    expect(glyphen(gebalkt, "balken")).not.toEqual([]);
+    for (const m of [anStelle("Double"), sechzehntel, gebalkt]) {
+      expect(fahnenAmVorschlag(m).map((f) => f.anzahl)).toEqual([1]);
+    }
+  });
+});
+
 describe("Punkt", () => {
   const punktiert = marsch(
     "Punktiert",

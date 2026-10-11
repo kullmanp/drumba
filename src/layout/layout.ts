@@ -197,8 +197,14 @@ export type Glyph =
     }
   | {
       readonly typ: "fahne";
+      /**
+       * Woran sie haengt: am unteren Ende eines Halses, nach rechts oben
+       * ausschwingend, oder am oberen Ende des Vorschlags eines Doubles, nach
+       * rechts unten fallend.
+       */
+      readonly haengtAn: "hals" | "vorschlag";
       readonly x: number;
-      /** Am unteren Ende des Halses. */
+      /** Das Ende, an dem sie haengt. */
       readonly y: number;
       /** Achtel eine, Sechzehntel zwei. */
       readonly anzahl: number;
@@ -577,12 +583,13 @@ const legeTakt = (
     const merkmale = FIGURMERKMALE[schlag.figur];
     if (merkmale.vorschlag) {
       const kopfRand = kopfY - platzierter.kopfHoehe / 2;
-      glyphen.push({
-        typ: "vorschlag",
-        x,
-        yOben: kopfRand - VORSCHLAG_LAENGE * (platzierter.kopfHoehe / KOPF_HOEHE),
-        yUnten: kopfRand,
-      });
+      const vorschlagOben = kopfRand - VORSCHLAG_LAENGE * (platzierter.kopfHoehe / KOPF_HOEHE);
+      glyphen.push({ typ: "vorschlag", x, yOben: vorschlagOben, yUnten: kopfRand });
+      // Die leise Dupfe eines Doubles steht als Fahne oben am Vorschlag — eine,
+      // gleich welchen Wert der Schlag hat und ob er gebalkt ist.
+      if (merkmale.leiseDupfe) {
+        glyphen.push({ typ: "fahne", haengtAn: "vorschlag", x, y: vorschlagOben, anzahl: 1 });
+      }
     }
     // Der Wirbel quert den Hals zwischen Notenlinie und Halsende — dort, wo jeder
     // Hals verlaeuft, gleich auf welcher Seite der Linie sein Kopf steht.
@@ -602,7 +609,7 @@ const legeTakt = (
     // einzelne Achtel wie eine Viertel.
     const fahnen = fahnenAnzahl(schlag.wert);
     if (fahnen > 0 && !gebalkt.has(platzierter)) {
-      glyphen.push({ typ: "fahne", x: halsX, y: halsEnde, anzahl: fahnen });
+      glyphen.push({ typ: "fahne", haengtAn: "hals", x: halsX, y: halsEnde, anzahl: fahnen });
     }
   }
 

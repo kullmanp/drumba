@@ -53,7 +53,10 @@ const balkenRechteck = (xA: number, xB: number, y: number, ebene: number) => (
   />
 );
 const FAHNE_BREITE = 7;
-/** Die Fahne haengt am unteren Halsende und schwingt nach rechts oben aus. */
+/**
+ * Die Fahne haengt am unteren Halsende und schwingt nach rechts oben aus; am
+ * Vorschlag eines Doubles haengt sie oben und faellt gespiegelt nach rechts unten.
+ */
 const FAHNE_STEIGUNG = 6;
 const FAHNE_ABSTAND = 5;
 /**
@@ -295,21 +298,24 @@ const zeichne = (glyph: Glyph) => {
       return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
     case "balkenstummel":
       return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
-    case "fahne":
+    case "fahne": {
+      // Nach oben vom Halsende, nach unten vom oberen Ende des Vorschlags.
+      const richtung = glyph.haengtAn === "hals" ? -1 : 1;
       return (
         <>
           {Array.from({ length: glyph.anzahl }, (_, i) => (
             <line
               key={i}
               x1={glyph.x}
-              y1={glyph.y - i * FAHNE_ABSTAND}
+              y1={glyph.y + richtung * i * FAHNE_ABSTAND}
               x2={glyph.x + FAHNE_BREITE}
-              y2={glyph.y - i * FAHNE_ABSTAND - FAHNE_STEIGUNG}
-              strokeWidth={HALS_STAERKE}
+              y2={glyph.y + richtung * (i * FAHNE_ABSTAND + FAHNE_STEIGUNG)}
+              strokeWidth={glyph.haengtAn === "hals" ? HALS_STAERKE : VORSCHLAG_STAERKE}
             />
           ))}
         </>
       );
+    }
   }
 };
 

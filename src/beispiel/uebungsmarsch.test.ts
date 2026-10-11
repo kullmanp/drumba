@@ -13,7 +13,7 @@ describe("Uebungsmarsch", () => {
     const figuren = new Set(
       uebungsmarsch.verse.flatMap((v) => v.takte.flatMap((t) => t.schlaege.map((s) => s.figur))),
     );
-    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp", "Fuenferruf"]));
+    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp", "Double", "Fuenferruf"]));
   });
 
   it("zeigt einen Fuenferruf im Takt und einen, der ueber den Taktstrich landet", () => {
