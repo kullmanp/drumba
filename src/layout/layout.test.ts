@@ -1164,6 +1164,108 @@ describe("Fuenferruf", () => {
   });
 });
 
+describe("Siebnerruf", () => {
+  /**
+   * ZicZac, Vers 1, Takt 4: Sechzehntel rechts, Siebnerruf links frei auf 1/16,
+   * Landung rechts auf 1/4, Achtel links.
+   */
+  const zicZac = marsch(
+    "ZicZac, Takt 4",
+    vers([2, 4], 1, {
+      schlaege: [
+        schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+        schlag("Siebnerruf", "links", [1, 16], [3, 16]),
+        schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+        schlag("Dupfe", "links", [3, 8], [1, 8]),
+      ],
+    }),
+  );
+  const ruf = () => ({
+    kopf: glyphen(zicZac, "notenkopf")[1]!,
+    hals: glyphen(zicZac, "hals")[1]!,
+  });
+
+  it("zeichnet einen Siebnerruf mit Landung in derselben Hand nicht, sondern wirft", () => {
+    const m = marsch(
+      "Falsche Hand",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Siebnerruf", "links", [0, 1], [3, 16]),
+          schlag("Dupfe", "links", [3, 16], [5, 16]),
+        ],
+      }),
+    );
+    expect(() => layout(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("traegt keinen Vorschlag", () => {
+    expect(glyphen(zicZac, "vorschlag")).toEqual([]);
+  });
+
+  it("setzt einen Punkt neben seinen Kopf", () => {
+    const { kopf } = ruf();
+    const [punkt, ...weitere] = glyphen(zicZac, "punkt");
+
+    expect(weitere).toEqual([]);
+    expect(punkt!.x).toBeGreaterThan(kopf.x);
+    expect(punkt!.y).toBe(kopf.y);
+  });
+
+  it("setzt einen Wirbel aus zwei Strichen auf seinen Hals", () => {
+    const { hals } = ruf();
+    const [striche, ...weitere] = glyphen(zicZac, "wirbelstriche");
+
+    expect(weitere).toEqual([]);
+    expect(striche!.anzahl).toBe(2);
+    expect(striche!.x).toBe(hals.x);
+    expect(striche!.y).toBeGreaterThan(hals.yOben);
+    expect(striche!.y).toBeLessThan(hals.yUnten);
+  });
+
+  it("steht frei: kleiner, unter der Linie, ungebalkt mit eigener Fahne", () => {
+    const { kopf, hals } = ruf();
+    const landung = glyphen(zicZac, "notenkopf")[2]!;
+    const linie = glyphen(zicZac, "notenlinie")[0]!;
+    const balken = glyphen(zicZac, "balken");
+
+    expect(kopf.hoehe).toBeLessThan(landung.hoehe);
+    expect(kopf.y - kopf.hoehe / 2).toBeGreaterThan(linie.y);
+    expect(balken.some((b) => b.x1 <= hals.x && hals.x <= b.x2)).toBe(false);
+    expect(
+      glyphen(zicZac, "fahne")
+        .filter((f) => f.x === hals.x)
+        .map((f) => f.anzahl),
+    ).toEqual([1]);
+  });
+
+  it("schlaegt den Bogen von seinem Kopf unter der Linie zur Landung darueber", () => {
+    const { kopf } = ruf();
+    const landung = glyphen(zicZac, "notenkopf")[2]!;
+    const linie = glyphen(zicZac, "notenlinie")[0]!;
+    const [bogen, ...weitere] = glyphen(zicZac, "bogen");
+
+    expect(weitere).toEqual([]);
+    // Der Bogen beginnt am rechten Rand des Kopfes, aber ueber der Linie, nicht in ihr.
+    expect(bogen!.x1).toBeCloseTo(kopf.x + kopf.breite / 2, 10);
+    expect(bogen!.y1).toBeLessThan(linie.y);
+    // Und endet ueber dem Kopf der Landung.
+    expect(Math.abs(bogen!.x2 - landung.x)).toBeLessThanOrEqual(landung.breite / 2);
+    expect(bogen!.y2).toBeLessThan(landung.y - landung.hoehe / 2);
+    expect(bogen!.scheitelY).toBeLessThan(Math.min(bogen!.y1, bogen!.y2));
+  });
+
+  it("schreibt die 7 ueber den Bogen", () => {
+    const [zahl, ...weitere] = glyphen(zicZac, "rufZahl");
+    const [bogen] = glyphen(zicZac, "bogen");
+
+    expect(weitere).toEqual([]);
+    expect(zahl!.text).toBe("7");
+    expect(zahl!.x).toBeGreaterThan(bogen!.x1);
+    expect(zahl!.x).toBeLessThan(bogen!.x2);
+    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
+  });
+});
+
 describe("Auftakt", () => {
   /** Viertel und Viertelpause: Platz, ueber den der Auftakt bei der Wiederholung faellt. */
   const schluss: Taktentwurf = {

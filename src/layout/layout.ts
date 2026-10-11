@@ -113,6 +113,12 @@ const PUNKT_ABSTAND = 7;
 const BOGEN_EINZUG = KOPF_BREITE / 4;
 const BOGEN_LUFT = 2;
 const BOGEN_HOEHE = 8;
+/**
+ * Ein Ruf links hat seinen Kopf unter der Linie; sein Bogen beginnt dann nicht
+ * ueber dem Kopf, in der Linie, sondern so weit ueber ihr, am rechten Rand des
+ * Kopfes. Nach Augenmass an ZicZac, Vers 1, Takt 4.
+ */
+const BOGEN_UEBER_LINIE = 3;
 /** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
 const ZAHL_LUFT = 2;
 /**
@@ -712,6 +718,7 @@ const legeBoegen = (
   vers: Vers,
   platzierterAuftakt: readonly PlatzierterSchlag[],
   platzierte: readonly (readonly PlatzierterSchlag[])[],
+  linieY: number,
   glyphen: Glyph[],
 ): void => {
   const ueberKopf = (p: PlatzierterSchlag): number => p.kopfY - p.kopfHoehe / 2 - BOGEN_LUFT;
@@ -724,9 +731,11 @@ const legeBoegen = (
       if (!merkmale) return;
       const ziel = folgeschlag(vers, taktIndex, index)!;
       const landung = platzierterTakt(ziel.taktIndex)[ziel.index]!;
-      const x1 = ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE);
+      const { x1, y1 } =
+        ruf.kopfY > linieY
+          ? { x1: ruf.x + ruf.kopfBreite / 2, y1: linieY - BOGEN_UEBER_LINIE }
+          : { x1: ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE), y1: ueberKopf(ruf) };
       const x2 = landung.x - BOGEN_EINZUG;
-      const y1 = ueberKopf(ruf);
       const y2 = ueberKopf(landung);
       const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
       glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
@@ -873,7 +882,7 @@ const legeVers = (
       ),
     );
   }
-  legeBoegen(vers, platzierterAuftakt, platzierte, glyphen);
+  legeBoegen(vers, platzierterAuftakt, platzierte, linieY, glyphen);
   legeGerollteDupfe(
     vers,
     platzierterAuftakt,

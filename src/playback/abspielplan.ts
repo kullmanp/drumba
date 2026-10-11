@@ -15,7 +15,6 @@ import {
   andereHand,
   auftaktBeginn,
   FIGURMERKMALE,
-  FUENFERRUF_DAUER,
   pruefeMarsch,
   taktLaenge,
   zaehlzeit,
@@ -69,15 +68,18 @@ const ROLL_DUPFE_LAUTSTAERKE = 0.4;
  * ihrer Position. Der Vorschlag eines Schlepps gehoert nicht dazu — sein Abstand
  * ist eine Geste in Sekunden, kein Notenwert.
  *
- * Der Fuenferruf spielt hier nur seine ersten vier Schlaege, gleichmaessig ueber
- * seine Achtel verteilt; der fuenfte ist die Landung, ein eigener Schlag.
+ * Ein Ruf spielt hier alle Schlaege ausser der Landung, gleichmaessig ueber
+ * seine Dauer verteilt und paarweise gerollt, mit der eigenen Hand vorn: der
+ * Fuenferruf rechts, rechts, links, links, der Siebnerruf links, links, rechts,
+ * rechts, links, links. Die Landung ist ein eigener Schlag.
  */
 const figurSchlaege = (schlag: Schlag): { hand: Hand; versatz: Bruch }[] => {
-  if (schlag.figur !== "Fuenferruf") return [{ hand: schlag.hand, versatz: NULL }];
-  const andere = andereHand(schlag.hand);
-  return [schlag.hand, schlag.hand, andere, andere].map((hand, i) => ({
-    hand,
-    versatz: multipliziere(FUENFERRUF_DAUER, bruch(i, 4)),
+  const ruf = FIGURMERKMALE[schlag.figur].ruf;
+  if (!ruf) return [{ hand: schlag.hand, versatz: NULL }];
+  const anzahl = ruf.schlaege - 1;
+  return Array.from({ length: anzahl }, (_, i) => ({
+    hand: Math.floor(i / 2) % 2 === 0 ? schlag.hand : andereHand(schlag.hand),
+    versatz: multipliziere(ruf.dauer, bruch(i, anzahl)),
   }));
 };
 

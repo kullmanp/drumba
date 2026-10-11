@@ -5,7 +5,7 @@ import { andereHand } from "../model/marsch";
 /**
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
  * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
- * Dupfe, Schlepp, Double, Fuenferruf und Dreierruf — auf beiden Haenden, in
+ * Dupfe, Schlepp, Double, Fuenferruf, Siebnerruf und Dreierruf — auf beiden Haenden, in
  * 6/8 und in 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den
  * Taktstrich und einer aus dem Auftakt in Takt 1.
  *
@@ -15,7 +15,8 @@ import { andereHand } from "../model/marsch";
  * erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt Pausen: eine Achtelpause
  * vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und am Ende eine
  * Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner Quintole und dem
- * Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet.
+ * Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet; Takt 4 ist
+ * ZicZac, Vers 1, Takt 4 mit seinem Siebnerruf.
  */
 
 const schlag = (
@@ -155,15 +156,15 @@ export const uebungsmarsch: Marsch = {
           pausen: [],
           tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
         },
-        // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
-        // Der erste Schlag ist ein Dreierruf wie in ZicZac, Vers 1, Takt 4: sein
-        // Zeichen steht vor dem Taktstrich.
+        // ZicZac, Vers 1, Takt 4: der Dreierruf rechts als Landung des
+        // Tagwachtstreichs — sein Zeichen steht vor dem Taktstrich —, dann ein
+        // freier Siebnerruf links, der rechts auf der zweiten Zaehlzeit landet.
         {
           schlaege: [
-            schlag("Dreierruf", "rechts", [0, 1], [3, 16]),
-            schlag("Dupfe", "links", [3, 16], [1, 16]),
-            schlag("Dupfe", "rechts", [1, 4], [3, 16]),
-            schlag("Dupfe", "links", [7, 16], [1, 16]),
+            schlag("Dreierruf", "rechts", [0, 1], [1, 16]),
+            schlag("Siebnerruf", "links", [1, 16], [3, 16]),
+            schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+            schlag("Dupfe", "links", [3, 8], [1, 8]),
           ],
           pausen: [],
           tolen: [],

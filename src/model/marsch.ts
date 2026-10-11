@@ -18,23 +18,32 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * was die Figur ausmacht; der Compiler erzwingt beides. Wie ein Ruf klingt,
  * steht im Abspielplan.
  *
- * Von der Ruf-Familie steht erst der Fuenferruf (mit Schlepp) hier. Er fuellt
- * genau eine Achtel; seine Landung ist nicht Teil von ihm, sondern der naechste
- * Schlag (ADR-0002) — `pruefeMarsch` stellt sicher, dass sie da ist.
+ * Von der Ruf-Familie stehen der Fuenferruf (mit Schlepp) und der Siebnerruf
+ * hier. Jeder fuellt genau seine Dauer — eine Achtel, eine punktierte Achtel;
+ * seine Landung ist nicht Teil von ihm, sondern der naechste Schlag (ADR-0002) —
+ * `pruefeMarsch` stellt sicher, dass sie da ist.
  *
  * Der Dreierruf steht anders: auf seiner Landung (ADR-0004). Der Schlag ist die
  * Landung; die beiden gerollten Dupfe davor gehoeren zur Figur.
  *
  * `Double` ist das Double des Glossars, in ASCII geschrieben.
  */
-export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf" | "Dreierruf";
+export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf" | "Siebnerruf" | "Dreierruf";
 
 /** Was eine Figur ausmacht, an einer Stelle — Layout und Wiedergabe lesen beide hier. */
 export interface Figurmerkmale {
   /** Ob ein Vorschlag in der anderen Hand kurz vor dem Schlag liegt. */
   readonly vorschlag: boolean;
-  /** Bei einem Ruf: wie viele Schlaege er zaehlt, die Landung eingerechnet. */
-  readonly ruf?: { readonly schlaege: number };
+  /**
+   * Bei einem Ruf: wie viele Schlaege er zaehlt, die Landung eingerechnet; die
+   * Dauer, die er bis zur Landung fuellt — zugleich sein notierter Wert —, und
+   * in welcher Hand er landet, gemessen an seiner eigenen.
+   */
+  readonly ruf?: {
+    readonly schlaege: number;
+    readonly dauer: Bruch;
+    readonly landung: "gleicheHand" | "andereHand";
+  };
   /**
    * Bei einem Double: die leise Dupfe in der Hand des Schlags, `vorlauf` (in
    * Ganzen) vor ihm. Ein Notenwert, keine Geste — sie waechst mit dem Tempo. Wie
@@ -57,7 +66,15 @@ export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
   // Ein Schlepp mit einer leisen Dupfe eine Sechzehntel davor.
   Double: { vorschlag: true, leiseDupfe: { vorlauf: bruch(1, 16) } },
   // Der Fuenferruf beginnt mit einem Schlepp und hat darum dessen Vorschlag.
-  Fuenferruf: { vorschlag: true, ruf: { schlaege: 5 } },
+  Fuenferruf: {
+    vorschlag: true,
+    ruf: { schlaege: 5, dauer: bruch(1, 8), landung: "gleicheHand" },
+  },
+  // Sechs gerollte Schlaege ohne Schlepp, dann die Landung in der anderen Hand.
+  Siebnerruf: {
+    vorschlag: false,
+    ruf: { schlaege: 7, dauer: bruch(3, 16), landung: "andereHand" },
+  },
   // Zwei gerollte Dupfe in der anderen Hand, dann der Schlag als Landung.
   Dreierruf: { vorschlag: false, gerollteDupfe: { anzahl: 2 } },
 };
@@ -366,9 +383,10 @@ export const ort = (versNummer: number, taktNummer: number): string =>
   taktNummer === 0 ? `Vers ${versNummer}, Auftakt` : `Vers ${versNummer}, Takt ${taktNummer}`;
 
 /**
- * Ein Ruf ohne gueltige Landung: kein Schlag danach, keiner genau eine Achtel
- * spaeter, einer in der falschen Hand oder einer, der keine Dupfe ist. Ein
- * Ruf, der nirgends landet, wird weder gezeichnet noch gespielt.
+ * Ein Ruf, der nicht gezeichnet oder gespielt werden kann: einer ohne gueltige
+ * Landung — kein Schlag danach, keiner genau seine Dauer spaeter, einer in der
+ * falschen Hand oder einer, der keine Dupfe ist —, oder einer, dessen Wert
+ * nicht seine Dauer ist.
  */
 export class UngueltigerRufError extends Error {
   constructor(
@@ -376,11 +394,11 @@ export class UngueltigerRufError extends Error {
     /** Ab 1 gezaehlt; 0 ist der Auftakt. */
     readonly taktNummer: number,
     readonly schlag: Schlag,
+    grund: string,
   ) {
     super(
       `${ort(versNummer, taktNummer)}: ${schlag.figur} ${schlag.hand} auf ` +
-        `${alsText(schlag.position)} hat keine Landung auf einer Dupfe eine ` +
-        `Achtel spaeter in derselben Hand`,
+        `${alsText(schlag.position)} ${grund}`,
     );
     this.name = "UngueltigerRufError";
   }
@@ -467,9 +485,6 @@ const pruefeAuftaktWiederkehr = (marsch: Marsch, versIndex: number): void => {
   }
 };
 
-/** Wie lange ein Fuenferruf von seinem Schlepp bis zur Landung dauert. */
-export const FUENFERRUF_DAUER = bruch(1, 8);
-
 /**
  * Ein Schlag mit der Stelle, an der er im Vers steht: `taktIndex` und `index`
  * in dessen Schlaegen, damit das Layout ihn bei sich wiederfindet, statt
@@ -527,20 +542,31 @@ export const folgeschlag = (
 };
 
 /**
- * Wirft, wenn der Ruf an dieser Stelle keine gueltige Landung hat. Jeder Ruf
- * landet auf einer Dupfe (ADR-0004).
+ * Wirft, wenn der Ruf an dieser Stelle nicht seine Dauer als Wert oder keine
+ * gueltige Landung hat: den naechsten Schlag, genau seine Dauer spaeter, in der
+ * Hand, die er verlangt. Jeder Ruf landet auf einer Dupfe (ADR-0004).
  */
 const pruefeLandung = (vers: Vers, versIndex: number, taktIndex: number, index: number): void => {
   const schlag = taktAn(vers, taktIndex)!.schlaege[index]!;
-  if (!FIGURMERKMALE[schlag.figur].ruf) return;
+  const ruf = FIGURMERKMALE[schlag.figur].ruf;
+  if (!ruf) return;
+  const fehler = (grund: string) =>
+    new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag, grund);
+  if (vergleiche(schlag.wert, ruf.dauer) !== 0) {
+    throw fehler(`hat den Wert ${alsText(schlag.wert)} statt ${alsText(ruf.dauer)}`);
+  }
+  const hand = ruf.landung === "andereHand" ? andereHand(schlag.hand) : schlag.hand;
   const landung = folgeschlag(vers, taktIndex, index);
   if (
     !landung ||
-    vergleiche(landung.abstand, FUENFERRUF_DAUER) !== 0 ||
-    landung.schlag.hand !== schlag.hand ||
+    vergleiche(landung.abstand, ruf.dauer) !== 0 ||
+    landung.schlag.hand !== hand ||
     landung.schlag.figur !== "Dupfe"
   ) {
-    throw new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag);
+    const welche = hand === schlag.hand ? "derselben" : "der anderen";
+    throw fehler(
+      `hat keine Landung auf einer Dupfe ${alsText(ruf.dauer)} spaeter in ${welche} Hand`,
+    );
   }
 };
 

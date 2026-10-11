@@ -13,7 +13,9 @@ describe("Uebungsmarsch", () => {
     const figuren = new Set(
       uebungsmarsch.verse.flatMap((v) => v.takte.flatMap((t) => t.schlaege.map((s) => s.figur))),
     );
-    expect(figuren).toEqual(new Set(["Dupfe", "Schlepp", "Double", "Fuenferruf", "Dreierruf"]));
+    expect(figuren).toEqual(
+      new Set(["Dupfe", "Schlepp", "Double", "Fuenferruf", "Siebnerruf", "Dreierruf"]),
+    );
   });
 
   it("zeigt einen Fuenferruf im Takt und einen, der ueber den Taktstrich landet", () => {
@@ -75,6 +77,11 @@ describe("Uebungsmarsch", () => {
   it("zeigt den Tagwachtstreich aus ZicZac mit beiden Dreierruf-Zeichen", () => {
     const zeichen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "gerollteDupfe");
     expect(zeichen.map((z) => z.hand)).toEqual(["rechts", "links"]);
+  });
+
+  it("zeigt den Siebnerruf aus ZicZac, Vers 1, Takt 4, mit seiner 7", () => {
+    const zahlen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "rufZahl");
+    expect(zahlen.map((z) => z.text)).toContain("7");
   });
 
   it("laesst sich spielen", () => {

@@ -328,6 +328,16 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
     expect(() => pruefeMarsch(m)).not.toThrow();
   });
 
+  it("verwirft einen Fuenferruf, der keine Achtel ist", () => {
+    const m = zweiViertel([
+      schlag("Fuenferruf", "rechts", [0, 1], [1, 16]),
+      pause([1, 16], [1, 16]),
+      schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+      pause([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(/Wert 1\/16 statt 1\/8/);
+  });
+
   it("benennt Vers und Takt des Rufs", () => {
     const m = zweiViertel(
       [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
@@ -579,6 +589,72 @@ describe("pruefeMarsch: Tole", () => {
       dupfe([1, 4], [1, 4]),
     ]);
     expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
+  });
+});
+
+describe("pruefeMarsch: Siebnerruf und Landung", () => {
+  /** 2/4 wie ZicZac, Vers 1, Takt 4: Siebnerruf links auf 1/16, `landung` als Achtel auf 1/4. */
+  const mitLandung = (landung: Schlag): Marsch =>
+    zweiViertel([
+      dupfe([0, 1], [1, 16]),
+      schlag("Siebnerruf", "links", [1, 16], [3, 16]),
+      landung,
+      pause([3, 8], [1, 8]),
+    ]);
+
+  it("laesst einen Siebnerruf links mit Landung rechts 3/16 spaeter gelten", () => {
+    const m = mitLandung(schlag("Dupfe", "rechts", [1, 4], [1, 8]));
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("laesst den gespiegelten Siebnerruf rechts mit Landung links gelten", () => {
+    const m = zweiViertel([
+      schlag("Siebnerruf", "rechts", [0, 1], [3, 16]),
+      schlag("Dupfe", "links", [3, 16], [1, 16]),
+      pause([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft eine Landung in derselben Hand und nennt, was der Ruf erwartet", () => {
+    const m = mitLandung(schlag("Dupfe", "links", [1, 4], [1, 8]));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/3\/16 spaeter in der anderen Hand/);
+  });
+
+  it("verwirft eine Landung, die nicht genau 3/16 nach dem Ruf liegt", () => {
+    const m = zweiViertel([
+      dupfe([0, 1], [1, 16]),
+      schlag("Siebnerruf", "links", [1, 16], [3, 16]),
+      pause([1, 4], [1, 16]),
+      schlag("Dupfe", "rechts", [5, 16], [1, 8]),
+      pause([7, 16], [1, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it.each(["Schlepp", "Double"] as const)("verwirft eine Landung auf einem %s", (figur) => {
+    const m = mitLandung(schlag(figur, "rechts", [1, 4], [1, 8]));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft einen Siebnerruf, auf den kein Schlag mehr folgt", () => {
+    const m = zweiViertel([
+      pause([0, 1], [5, 16]),
+      schlag("Siebnerruf", "links", [5, 16], [3, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft einen Siebnerruf, der keine punktierte Achtel ist", () => {
+    const m = zweiViertel([
+      schlag("Siebnerruf", "links", [0, 1], [1, 8]),
+      pause([1, 8], [1, 16]),
+      schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+      pause([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/3\/16/);
   });
 });
 
