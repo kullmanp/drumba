@@ -1,6 +1,6 @@
 # ZicZac Vers 1 — Takte 5 to 8
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -160,3 +160,21 @@ ZicZac Vers 1, Takte 4 and 7.
 When Ruf and Landung are both links, the Bogen now lies flat just above the Notenlinie and the
 number under it, between the heads (ZicZac Vers 1, Takt 7). Still cramped: the Ruf stands only a
 Sechzehntel before its Landung.
+
+**Closed 2026-10-11.** Specified in `c34df28`, built in `cf4a956` (the Fünferruf ohne Schlepp,
+the drawn value before a free Ruf, the Triole's hooks, ZicZac Vers 1, Takte 5–8), with fixes
+after your check in `b0dd343` (Ruf number under the Bogen, free Ruf Hals of fixed length) and
+`0033e94` (flat Bogen and number under the line when Ruf and Landung are both links). Where the
+result departs from the spec:
+
+- A free Ruf does not break its Balkengruppe; the Balken runs under it.
+- A Bogen to a Landung links ends above the Notenlinie.
+- Every Ruf's number stands under its Bogen, not above it as the earlier specs had it.
+- A free Ruf's Hals is measured from its head, not from the line.
+
+Loose ends:
+
+- The Fünferruf ohne Schlepp stands only a Sechzehntel before its Landung, so its Bogen and "5"
+  are cramped against the Landung's head; fixing it means more room before a free Ruf's
+  Landung.
+- The Triole's hooks assume the number's size, which the renderer sets.
