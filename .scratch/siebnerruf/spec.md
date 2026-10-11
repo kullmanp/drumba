@@ -1,6 +1,6 @@
 # Siebnerruf — the 7er in ZicZac, Vers 1, Takt 4
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -122,3 +122,21 @@ by eye or ear.
 `GLOSSARY.md` gained **Siebnerruf**; **Landung** no longer claims every Ruf lands in the Hand
 it started with (the Dreierruf never did). Source: `ZicZac.pdf`, Vers 1, Takt 4 — crop it with
 `scripts/ausschnitt.sh` (about y 340, x 725, 160 × 140 on the 2400 px render).
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `bc61e41`, built in `3a79a9d` (the Siebnerruf in the model,
+playback and layout, and ZicZac Vers 1, Takt 4 in the Übungsmarsch). Where the result departs
+from the spec:
+
+- A Ruf's entry in `FIGURMERKMALE` holds `schlaege`, `dauer` and `landung`
+  (`"gleicheHand"` or `"andereHand"`). The `wert` check reads `dauer` for every Ruf, so a
+  Fünferruf that is not an Achtel is now rejected too.
+- Playback derives the stroke pattern for both Rufe from the table — `schlaege − 1` strokes,
+  rolled in pairs with the Ruf's own Hand first — instead of naming a Figur.
+- The Bogen of a Ruf whose head is below the line starts above the line, at the head's right
+  edge (`BOGEN_UEBER_LINIE`), as in the ZicZac crop, not at the Notenkopf itself as the testing
+  section words it.
+
+Loose ends: `BOGEN_UEBER_LINIE` is chosen by eye and does not scale with the head; the Bogen
+arches higher than in the original, as for every Ruf.
