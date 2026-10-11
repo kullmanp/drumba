@@ -1,6 +1,6 @@
 # Doublé
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -90,3 +90,20 @@ Decided in the 2026-10-11 grilling. This answers the closed Pausen spec's loose 
 flagged line above each Achtel of ZicZac Vers 1, Takt 2 is the Doublé. Reference:
 `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`; crop with
 `scripts/ausschnitt.sh`.
+
+## Comments
+
+**Closed 2026-10-11.** Specified in `ba8fa07`, built in `e2a2f2e` (the Doublé in the model and
+playback), `0c6f009` (drawing it, and ZicZac Vers 1, Takt 2 in the Übungsmarsch) and `90619ba`
+(the flag tested on both Hands). Where the result departs from the spec:
+
+- The flag on the Vorschlag is drawn at the Vorschlag's stroke weight, not the Hals's.
+- The `fahne` glyph names its end as `haengtAn: "hals" | "vorschlag"`.
+
+Loose ends:
+
+- The flag is a straight line; the original's is a curved hook, as is every Fahne's.
+- The soft Dupfe's loudness is a fixed 0.5, not half the main stroke's: the two agree only while
+  every main stroke is at 1, and will part once accents arrive.
+- The loudness values (soft Dupfe 0.5, Vorschlag 0.3) are still first guesses, not tuned by ear.
+- The rest of ZicZac Vers 1, Takt 3 is the next slice.

@@ -1,6 +1,6 @@
 # 02 — Draw the Doublé, and put it into the Übungsmarsch
 
-Status: ready-for-human
+Status: done
 Type: task
 Blocked by: 01
 
