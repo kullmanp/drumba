@@ -299,8 +299,10 @@ const zeichne = (glyph: Glyph) => {
     case "balkenstummel":
       return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
     case "fahne": {
-      // Nach oben vom Halsende, nach unten vom oberen Ende des Vorschlags.
-      const richtung = glyph.haengtAn === "hals" ? -1 : 1;
+      // Nach oben vom Halsende, nach unten vom oberen Ende des Vorschlags, und
+      // so duenn wie der Strich, an dem sie haengt.
+      const amHals = glyph.haengtAn === "hals";
+      const richtung = amHals ? -1 : 1;
       return (
         <>
           {Array.from({ length: glyph.anzahl }, (_, i) => (
@@ -310,7 +312,7 @@ const zeichne = (glyph: Glyph) => {
               y1={glyph.y + richtung * i * FAHNE_ABSTAND}
               x2={glyph.x + FAHNE_BREITE}
               y2={glyph.y + richtung * (i * FAHNE_ABSTAND + FAHNE_STEIGUNG)}
-              strokeWidth={glyph.haengtAn === "hals" ? HALS_STAERKE : VORSCHLAG_STAERKE}
+              strokeWidth={amHals ? HALS_STAERKE : VORSCHLAG_STAERKE}
             />
           ))}
         </>

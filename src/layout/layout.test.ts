@@ -422,15 +422,12 @@ describe("Schlepp", () => {
 });
 
 describe("Double", () => {
-  /** Ein 2/4-Takt: `figur` rechts als freie Achtel, dann Achtelpause und Viertel. */
-  const anStelle = (figur: Figur): Marsch =>
+  /** Ein 2/4-Takt: `figur` in `hand` als freie Achtel, dann Achtelpause und Viertel. */
+  const anStelle = (figur: Figur, hand: Hand = "rechts"): Marsch =>
     marsch(
       "Figur",
       vers([2, 4], 1, {
-        schlaege: [
-          schlag(figur, "rechts", [0, 1], [1, 8]),
-          schlag("Dupfe", "links", [1, 4], [1, 4]),
-        ],
+        schlaege: [schlag(figur, hand, [0, 1], [1, 8]), schlag("Dupfe", "links", [1, 4], [1, 4])],
         pausen: [pause([1, 8], [1, 8])],
       }),
     );
@@ -447,14 +444,16 @@ describe("Double", () => {
     expect(fahnenAmVorschlag(anStelle("Double"))).toHaveLength(1);
   });
 
-  it("haengt die Fahne an das obere Ende des Vorschlags", () => {
-    const m = anStelle("Double");
-    const [fahne] = fahnenAmVorschlag(m);
-    const vorschlag = glyphen(m, "vorschlag")[0]!;
+  it("haengt die Fahne an das obere Ende des Vorschlags, auf beiden Haenden", () => {
+    for (const hand of ["rechts", "links"] as const) {
+      const m = anStelle("Double", hand);
+      const [fahne] = fahnenAmVorschlag(m);
+      const vorschlag = glyphen(m, "vorschlag")[0]!;
 
-    expect(fahne!.x).toBeCloseTo(vorschlag.x, 10);
-    expect(fahne!.y).toBeCloseTo(vorschlag.yOben, 10);
-    expect(fahne!.anzahl).toBe(1);
+      expect(fahne!.x).toBeCloseTo(vorschlag.x, 10);
+      expect(fahne!.y).toBeCloseTo(vorschlag.yOben, 10);
+      expect(fahne!.anzahl).toBe(1);
+    }
   });
 
   it("gibt einem Schlepp und einer Dupfe keine Fahne am Vorschlag", () => {
