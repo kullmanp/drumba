@@ -157,27 +157,52 @@ export class UngueltigerRufError extends Error {
 /** Wie lange ein Fuenferruf von seinem Schlepp bis zur Landung dauert. */
 export const FUENFERRUF_DAUER = bruch(1, 8);
 
-/** Der Schlag nach einem anderen, mit seinem Abstand in Ganzen — auch ueber den Taktstrich. */
-interface Folgeschlag {
+/**
+ * Der Schlag nach einem anderen, mit seinem Abstand in Ganzen — auch ueber den
+ * Taktstrich. `taktIndex` und `index` sagen, wo er im Vers steht, damit das
+ * Layout ihn bei sich wiederfindet, statt selbst weiterzuzaehlen.
+ */
+export interface Folgeschlag {
   readonly schlag: Schlag;
   readonly abstand: Bruch;
+  readonly taktIndex: number;
+  readonly index: number;
 }
 
 /**
  * Der Schlag nach dem `index`-ten des Taktes `taktIndex` — im selben Takt oder
  * als erster des naechsten. Ueber das Ende des Verses hinaus sucht er nicht:
  * eine Landung im naechsten Vers oder in der Wiederholung gibt es noch nicht.
+ *
+ * Die eine Stelle, die sagt, wo ein Ruf landet: `pruefeMarsch` prueft daran die
+ * Landung, das Layout zieht den Bogen dorthin.
  */
-const folgeschlag = (vers: Vers, taktIndex: number, index: number): Folgeschlag | undefined => {
+export const folgeschlag = (
+  vers: Vers,
+  taktIndex: number,
+  index: number,
+): Folgeschlag | undefined => {
   const schlaege = vers.takte[taktIndex]!.schlaege;
   const schlag = schlaege[index]!;
   const imTakt = schlaege[index + 1];
-  if (imTakt) return { schlag: imTakt, abstand: subtrahiere(imTakt.position, schlag.position) };
+  if (imTakt) {
+    return {
+      schlag: imTakt,
+      abstand: subtrahiere(imTakt.position, schlag.position),
+      taktIndex,
+      index: index + 1,
+    };
+  }
 
   const imNaechsten = vers.takte[taktIndex + 1]?.schlaege[0];
   if (!imNaechsten) return undefined;
   const bisTaktende = subtrahiere(taktLaenge(vers.taktart), schlag.position);
-  return { schlag: imNaechsten, abstand: addiere(bisTaktende, imNaechsten.position) };
+  return {
+    schlag: imNaechsten,
+    abstand: addiere(bisTaktende, imNaechsten.position),
+    taktIndex: taktIndex + 1,
+    index: 0,
+  };
 };
 
 /**

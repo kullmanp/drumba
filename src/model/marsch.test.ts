@@ -3,6 +3,7 @@ import { bruch } from "./bruch";
 import type { Figur, Hand, Marsch, Schlag, Takt } from "./marsch";
 import {
   andereHand,
+  folgeschlag,
   pruefeMarsch,
   taktLaenge,
   taktUeberlauf,
@@ -110,6 +111,41 @@ describe("zaehlzeit", () => {
 
   it("behandelt das ungerade 5/8 als einfache Taktart", () => {
     expect(zaehlzeit({ zaehler: 5, nenner: 8 })).toEqual({ zaehler: 1, nenner: 8 });
+  });
+});
+
+describe("folgeschlag", () => {
+  it("findet den naechsten Schlag im selben Takt, mit seinem Abstand", () => {
+    const landung = schlag("Dupfe", "rechts", [1, 8], [1, 8]);
+    const [vers] = zweiViertel([schlag("Fuenferruf", "rechts", [0, 1], [1, 8]), landung]).verse;
+
+    expect(folgeschlag(vers!, 0, 0)).toEqual({
+      schlag: landung,
+      abstand: bruch(1, 8),
+      taktIndex: 0,
+      index: 1,
+    });
+  });
+
+  it("findet den ersten Schlag des naechsten Taktes, ueber den Taktstrich gemessen", () => {
+    const landung = schlag("Dupfe", "rechts", [0, 1], [2, 4]);
+    const [vers] = zweiViertel(
+      [schlag("Dupfe", "rechts", [0, 1], [3, 8]), schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+      [landung],
+    ).verse;
+
+    expect(folgeschlag(vers!, 0, 1)).toEqual({
+      schlag: landung,
+      abstand: bruch(1, 8),
+      taktIndex: 1,
+      index: 0,
+    });
+  });
+
+  it("findet keinen Schlag ueber das Ende des Verses hinaus", () => {
+    const [vers] = zweiViertel([schlag("Fuenferruf", "rechts", [3, 8], [1, 8])]).verse;
+
+    expect(folgeschlag(vers!, 0, 0)).toBeUndefined();
   });
 });
 

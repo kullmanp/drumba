@@ -1,7 +1,7 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, dividiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
-import { FIGURMERKMALE, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
+import { FIGURMERKMALE, folgeschlag, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
 
 /**
  * Das Zuendstoff-Layout: eine reine Funktion vom Marsch zu platzierten Glyphen.
@@ -515,29 +515,39 @@ const legeTakt = (
 };
 
 /**
- * Die Boegen der Rufe eines Verses, je vom Ruf zu seiner Landung — dem naechsten
- * Schlag, auch ueber den Taktstrich. Dass es ihn gibt und er passt, hat
- * `pruefeMarsch` schon sichergestellt. Ein Vers ist eine Zeile, also bricht
- * kein Bogen um.
+ * Die Boegen der Rufe eines Verses, je vom Ruf zu seiner Landung — dem Schlag,
+ * den das Modell mit `folgeschlag` nennt, auch ueber den Taktstrich. Dass es ihn
+ * gibt und er passt, hat `pruefeMarsch` schon sichergestellt. Ein Vers ist eine
+ * Zeile, also bricht kein Bogen um.
+ *
+ * `platzierte` haelt die platzierten Schlaege je Takt, in der Reihenfolge des
+ * Modells, damit die Landung des Modells ihren platzierten Schlag findet.
  */
-const legeBoegen = (platzierte: readonly PlatzierterSchlag[], glyphen: Glyph[]): void => {
+const legeBoegen = (
+  vers: Vers,
+  platzierte: readonly (readonly PlatzierterSchlag[])[],
+  glyphen: Glyph[],
+): void => {
   const ueberKopf = (p: PlatzierterSchlag): number => p.kopfY - p.kopfHoehe / 2 - BOGEN_LUFT;
 
-  platzierte.forEach((ruf, index) => {
-    const merkmale = FIGURMERKMALE[ruf.schlag.figur].ruf;
-    if (!merkmale) return;
-    const landung = platzierte[index + 1]!;
-    const x1 = ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE);
-    const x2 = landung.x - BOGEN_EINZUG;
-    const y1 = ueberKopf(ruf);
-    const y2 = ueberKopf(landung);
-    const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
-    glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
-    glyphen.push({
-      typ: "rufZahl",
-      x: (x1 + x2) / 2,
-      y: scheitelY - ZAHL_LUFT,
-      text: String(merkmale.schlaege),
+  platzierte.forEach((takt, taktIndex) => {
+    takt.forEach((ruf, index) => {
+      const merkmale = FIGURMERKMALE[ruf.schlag.figur].ruf;
+      if (!merkmale) return;
+      const ziel = folgeschlag(vers, taktIndex, index)!;
+      const landung = platzierte[ziel.taktIndex]![ziel.index]!;
+      const x1 = ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE);
+      const x2 = landung.x - BOGEN_EINZUG;
+      const y1 = ueberKopf(ruf);
+      const y2 = ueberKopf(landung);
+      const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
+      glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
+      glyphen.push({
+        typ: "rufZahl",
+        x: (x1 + x2) / 2,
+        y: scheitelY - ZAHL_LUFT,
+        text: String(merkmale.schlaege),
+      });
     });
   });
 };
@@ -557,7 +567,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
   glyphen.push({ typ: "notenlinie", x1: inhaltX, x2: inhaltX + breite, y: linieY });
 
   const strichAnzahl = vers.takte.length + 1;
-  const platzierte = vers.takte.flatMap((takt, index) => {
+  const platzierte = vers.takte.map((takt, index) => {
     const taktX = inhaltX + index * taktBreite(vers.taktart);
     glyphen.push(
       taktstrich(taktX, linieY, strichartFuer(index, strichAnzahl, vers.wiederholungen)),
@@ -574,7 +584,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
       ),
     );
   }
-  legeBoegen(platzierte, glyphen);
+  legeBoegen(vers, platzierte, glyphen);
 
   return inhaltX + breite;
 };
