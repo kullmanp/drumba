@@ -101,6 +101,11 @@ const BOGEN_LUFT = 2;
 const BOGEN_HOEHE = 8;
 /** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
 const ZAHL_LUFT = 2;
+/**
+ * Wie weit ein Balkenstummel vom Hals in seine Gruppe reicht — etwa eine
+ * Kopfbreite, nach Augenmass an ZicZac.
+ */
+const STUMMEL_LAENGE = 7;
 
 /**
  * Wie viele Striche des Wirbels den Hals eines Rufs queren. Vorerst fuer jeden
@@ -123,9 +128,6 @@ export type GlyphTyp = Glyph["typ"];
 
 /** Einfacher Strich oder Wiederholungsklammer. */
 export type Strichart = "einfach" | "wiederholungAnfang" | "wiederholungEnde";
-
-/** Wohin ein Balkenstummel vom Hals aus zeigt. */
-export type Richtung = "rechts" | "links";
 
 export interface Punkt {
   readonly x: number;
@@ -219,12 +221,12 @@ export type Glyph =
     }
   | {
       readonly typ: "balkenstummel";
-      /** Am Hals, an dem der Stummel haengt; seine Laenge waehlt der Renderer. */
-      readonly x: number;
+      /** Am Hals, an dem der Stummel haengt. */
+      readonly x1: number;
+      /** In die Gruppe hinein: am ersten Schlag rechts des Halses, sonst links. */
+      readonly x2: number;
       readonly y: number;
       readonly ebene: number;
-      /** In die Gruppe hinein: am ersten Schlag nach rechts, sonst nach links. */
-      readonly richtung: Richtung;
     }
   | { readonly typ: "versNummer"; readonly x: number; readonly y: number; readonly nummer: number }
   | {
@@ -404,12 +406,13 @@ const legeBalken = (
     const schliesse = () => {
       const [erster] = lauf;
       if (lauf.length === 1) {
+        const vorzeichen = erster === gruppe[0] ? 1 : -1;
         glyphen.push({
           typ: "balkenstummel",
-          x: erster!.halsX,
+          x1: erster!.halsX,
+          x2: erster!.halsX + vorzeichen * STUMMEL_LAENGE,
           y: balkenY,
           ebene,
-          richtung: erster === gruppe[0] ? "rechts" : "links",
         });
       } else if (lauf.length > 1) {
         glyphen.push({

@@ -39,11 +39,6 @@ const PUNKT_RADIUS = 1.5;
 const BALKEN_STAERKE = 3.76;
 const BALKEN_LUECKE = 2.5;
 /**
- * Wie weit ein Balkenstummel vom Hals in seine Gruppe reicht — etwa eine
- * Kopfbreite, nach Augenmass an ZicZac.
- */
-const STUMMEL_LAENGE = 7;
-/**
  * Ein Balken der gegebenen Ebene zwischen zwei x, in beliebiger Reihenfolge.
  * Ebene 1 liegt auf `y`; jede weitere stapelt sich darueber.
  */
@@ -227,10 +222,8 @@ const zeichne = (glyph: Glyph) => {
       );
     case "balken":
       return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
-    case "balkenstummel": {
-      const ende = glyph.x + (glyph.richtung === "rechts" ? STUMMEL_LAENGE : -STUMMEL_LAENGE);
-      return balkenRechteck(glyph.x, ende, glyph.y, glyph.ebene);
-    }
+    case "balkenstummel":
+      return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
     case "fahne":
       return (
         <>

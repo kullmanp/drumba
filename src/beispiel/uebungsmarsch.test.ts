@@ -43,7 +43,7 @@ describe("Uebungsmarsch", () => {
 
   it("zeigt Balkenstummel in beide Richtungen", () => {
     const stummel = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "balkenstummel");
-    expect(new Set(stummel.map((s) => s.richtung))).toEqual(new Set(["rechts", "links"]));
+    expect(new Set(stummel.map((s) => Math.sign(s.x2 - s.x1)))).toEqual(new Set([1, -1]));
   });
 
   it("hat einen wiederholten und einen einmal gespielten Vers", () => {

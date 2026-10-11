@@ -697,10 +697,10 @@ describe("Gemischte Balkengruppe", () => {
     expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
     expect(balken[0]!.x2).toBeCloseTo(haelse[2]!.x, 10);
     expect(stummel).toHaveLength(2);
-    expect(stummel[0]!.x).toBeCloseTo(haelse[0]!.x, 10);
-    expect(stummel[0]!.richtung).toBe("rechts");
-    expect(stummel[1]!.x).toBeCloseTo(haelse[2]!.x, 10);
-    expect(stummel[1]!.richtung).toBe("links");
+    expect(stummel[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(stummel[0]!.x2).toBeGreaterThan(haelse[0]!.x);
+    expect(stummel[1]!.x1).toBeCloseTo(haelse[2]!.x, 10);
+    expect(stummel[1]!.x2).toBeLessThan(haelse[2]!.x);
     expect(stummel.map((s) => s.ebene)).toEqual([2, 2]);
     expect(stummel[0]!.y).toBeCloseTo(balken[0]!.y, 10);
   });
@@ -716,9 +716,21 @@ describe("Gemischte Balkengruppe", () => {
     expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
     expect(balken[0]!.x2).toBeCloseTo(haelse[1]!.x, 10);
     expect(stummel).toHaveLength(1);
-    expect(stummel[0]!.x).toBeCloseTo(haelse[1]!.x, 10);
+    expect(stummel[0]!.x1).toBeCloseTo(haelse[1]!.x, 10);
+    expect(stummel[0]!.x2).toBeLessThan(haelse[1]!.x);
     expect(stummel[0]!.ebene).toBe(2);
-    expect(stummel[0]!.richtung).toBe("links");
+  });
+
+  it("haelt jeden Stummel innerhalb seiner Gruppe, zwischen erstem und letztem Hals", () => {
+    for (const m of [reihe([1, 16], [1, 8], [1, 16], [1, 4]), reihe([3, 16], [1, 16], [1, 4])]) {
+      const balken = glyphen(m, "balken").find((b) => b.ebene === 1)!;
+      for (const s of glyphen(m, "balkenstummel")) {
+        for (const x of [s.x1, s.x2]) {
+          expect(x).toBeGreaterThanOrEqual(balken.x1);
+          expect(x).toBeLessThanOrEqual(balken.x2);
+        }
+      }
+    }
   });
 
   it("balkt einen Fuenferruf auf der Zaehlzeit mit den Sechzehnteln danach", () => {
