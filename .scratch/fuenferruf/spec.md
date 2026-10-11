@@ -1,6 +1,6 @@
 # Fünferruf — first Ruf
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -144,3 +144,24 @@ two-thirds size, closer to the line, Hals about half as deep) with its own Fahne
 eye against ZicZac. A Fünferruf that starts on a Zählzeit beams as before. Open: the tradition
 may have a name for the Ruf that starts on a Zählzeit ("Volltakt-Fünfer"?), unconfirmed, so not
 in `GLOSSARY.md` yet.
+
+**Closed 2026-10-11.** Specified in `2965b52`, built in `1dfdd7b` and `1dc5243`; looks right and
+every user story and coverage item is met. Notes beyond the spec:
+
+- **`FIGURMERKMALE` in the model** says which Figuren have a Vorschlag and which are a Ruf, so
+  layout, playback and `pruefeMarsch` read one table instead of comparing Figur strings.
+- **The free, smaller Ruf** (comment above) goes beyond the spec, which deferred smaller Ruf
+  heads; the user asked for it after a first look.
+- **Glossary:** **Ruf** is no longer deferred, and **Bogen** was added beside **Wirbel** and
+  **Landung**. The slash glyph is `wirbelstriche`, since the Wirbel is the whole mark.
+
+Loose ends:
+
+- Slash, Bogen and free-Ruf proportions are by eye against ZicZac, not measured against
+  `2006Trommelfont`.
+- No links Ruf is drawn or tested; its Bogen would start between the head and the Notenlinie.
+- `legeBoegen` takes the next placed Schlag as the Landung, relying on `pruefeMarsch` rather
+  than sharing the model's `folgeschlag`.
+- Playback of the Fünferruf was not checked by ear in this session.
+- Next candidates: the Fünferruf ohne Schlepp, the other Rufe, Balkenstummel (a Ruf beamed with
+  Sechzehntel), a Landung across Verse or repeats.
