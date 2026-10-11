@@ -103,9 +103,9 @@ Auto-filling by the alternation rule is an authoring convenience, not a gap in t
 The family of measured rolls, counted by their number of strokes — the repertoire uses 3, 5,
 7, 9, 11, 15. A roll is one Figur with a duration, never pre-expanded into its constituent
 strokes; its last stroke is the **Landung**, a Schlag of its own, and always a Dupfe. Only the
-**Fünferruf**, the **Dreierruf** and the **Siebnerruf** are modelled so far. The traditional
-"Vierer" and "Achter" are not Rufe of their own but a Dreierruf and a Siebnerruf with a
-**Nachschlag**.
+**Fünferruf** (with and without Schlepp), the **Dreierruf** and the **Siebnerruf** are
+modelled so far. The traditional "Vierer" and "Achter" are not Rufe of their own but a
+Dreierruf and a Siebnerruf with a **Nachschlag**.
 
 **Fünferruf** (mit Schlepp):
 The most common Ruf. Five strokes: Schlepp rechts, Dupfe rechts, Dupfe links, Dupfe links,
@@ -114,7 +114,12 @@ the Achtel's end. So in 6/8, where an Achtel is a third of a Zählzeit instead o
 played faster than in 2/4. Practically always played starting rechts; the mirrored version
 starting links is rare and hard to play, but legitimate. Written as a Schlepp whose Hals
 carries a Wirbel, with a "5" and a slur to the fifth stroke.
-A **Fünferruf ohne Schlepp** (no Vorschlag on the first stroke) also exists; deferred.
+
+**Fünferruf ohne Schlepp**:
+Five strokes like a Fünferruf, without the Vorschlag: rolled in pairs, then the Landung in the
+Hand it started with — links, links, rechts, rechts, links, or the mirror. Its four strokes
+fill exactly a Sechzehntel, so they come twice as fast as a Fünferruf's. Written like a
+Siebnerruf, a head whose Hals carries a Wirbel, with a "5" and a slur to the Landung.
 
 **Siebnerruf**:
 Seven strokes: six rolled in pairs, then the Landung in the other Hand — links, links, rechts,
@@ -123,6 +128,12 @@ are evenly spaced and fill exactly a punktierte Achtel, so they come as fast as 
 Written like a Fünferruf without its Vorschlag: a dotted head whose Hals carries a Wirbel,
 with a "7" and a slur to the Landung. A Siebnerruf mit Schlepp, and the Siebnerruf mit
 Nachschlag (the traditional Achterruf), are variants not yet settled.
+
+**Freier Ruf**:
+A Ruf that does not start on a Zählzeit. Drawn small, unbeamed, with exactly one Fahne whatever
+its value. Its time is written into the Schlag before it: that Schlag is drawn with its own
+value plus the Ruf's, so a Sechzehntel before a free Siebnerruf is written as a Viertel. The
+Ruf's strokes sound in the last part of that written value.
 
 **Dreierruf**:
 Three strokes: two in one Hand, then the Landung in the other — rechts, rechts, links or the
@@ -147,7 +158,8 @@ A number of Schläge of a written value played in the time of a different number
 **Quintole** (five Sechzehntel in the time of four), the Triole (three in the time of two),
 the Sechstole and Siebentole. Its Schläge keep the values they would have without it and are
 played proportionally faster or slower. Written as its number under the Balken of the
-Schläge it covers, or under a single Notenkopf.
+Schläge it covers, or under a single Notenkopf. When it covers only part of its Balkengruppe,
+short hooks either side of the number mark how far it reaches.
 
 **Quintole**:
 Five Sechzehntel played in the time of four — one Zählzeit in 2/4. The first Tole the
