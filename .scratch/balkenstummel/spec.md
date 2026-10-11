@@ -1,6 +1,6 @@
 # Balkenstummel — Balkengruppen of mixed values
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -134,3 +134,20 @@ Sechzehntel, beamed from the Achtel to the last Sechzehntel with the Ruf outside
 The model's Fünferruf fills a whole Achtel before its Landung, so it cannot hold this yet; it
 is a question for the next grilling. A constructed layout test covers a Fünferruf on the
 Zählzeit beamed with Sechzehntel instead.
+
+**Closed 2026-10-11.** Specified in `178996d`, built in `70e6d76`. It looks right, and every
+user story and coverage item is met except ZicZac Takt 9 (see the comment above). Notes
+beyond the spec:
+
+- The Übungsmarsch's mixed Takte are ZicZac Vers 1, Takt 1 and a written Takt of two dotted
+  Achtel + Sechzehntel pairs.
+- Balken and Stummel share `balkenRechteck` in the renderer.
+
+Loose ends:
+
+- The Stummel's far end is computed in the renderer (`STUMMEL_LAENGE`, by eye), as agreed. A
+  review flagged that this conflicts with the AGENTS.md rule "no x in `src/render/`". Move it
+  into the layout if the rule should win.
+- ZicZac's "Achtel + free Fünferruf into a Sechzehntel" is not yet in the model.
+- Next candidates: that Ruf pattern, Pausen, the Auftakt (ZicZac opens every Vers with a free
+  Fünferruf), triplets, accents, or a first editor.
