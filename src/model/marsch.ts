@@ -18,17 +18,25 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * was die Figur ausmacht; der Compiler erzwingt beides. Wie ein Ruf klingt,
  * steht im Abspielplan.
  *
- * Von der Ruf-Familie stehen der Fuenferruf (mit Schlepp) und der Siebnerruf
- * hier. Jeder fuellt genau seine Dauer — eine Achtel, eine punktierte Achtel;
- * seine Landung ist nicht Teil von ihm, sondern der naechste Schlag (ADR-0002) —
- * `pruefeMarsch` stellt sicher, dass sie da ist.
+ * Von der Ruf-Familie stehen der Fuenferruf mit und ohne Schlepp und der
+ * Siebnerruf hier. Jeder fuellt genau seine Dauer — eine Achtel, eine
+ * Sechzehntel, eine punktierte Achtel; seine Landung ist nicht Teil von ihm,
+ * sondern der naechste Schlag (ADR-0002) — `pruefeMarsch` stellt sicher, dass
+ * sie da ist.
  *
  * Der Dreierruf steht anders: auf seiner Landung (ADR-0004). Der Schlag ist die
  * Landung; die beiden gerollten Dupfe davor gehoeren zur Figur.
  *
  * `Double` ist das Double des Glossars, in ASCII geschrieben.
  */
-export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf" | "Siebnerruf" | "Dreierruf";
+export type Figur =
+  | "Dupfe"
+  | "Schlepp"
+  | "Double"
+  | "Fuenferruf"
+  | "FuenferrufOhneSchlepp"
+  | "Siebnerruf"
+  | "Dreierruf";
 
 /** Was eine Figur ausmacht, an einer Stelle — Layout und Wiedergabe lesen beide hier. */
 export interface Figurmerkmale {
@@ -69,6 +77,12 @@ export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
   Fuenferruf: {
     vorschlag: true,
     ruf: { schlaege: 5, dauer: bruch(1, 8), landung: "gleicheHand" },
+  },
+  // Vier gerollte Schlaege ohne Schlepp in einer Sechzehntel — doppelt so
+  // schnell wie die des Fuenferrufs —, dann die Landung in derselben Hand.
+  FuenferrufOhneSchlepp: {
+    vorschlag: false,
+    ruf: { schlaege: 5, dauer: bruch(1, 16), landung: "gleicheHand" },
   },
   // Sechs gerollte Schlaege ohne Schlepp, dann die Landung in der anderen Hand.
   Siebnerruf: {
@@ -208,7 +222,7 @@ export const toleAn = (takt: Takt, position: Bruch): Tole | undefined =>
  * Wie lange ein Schlag oder eine Pause gespielt dauert: der notierte Wert, in
  * einer Tole mit `statt / anzahl` gestreckt oder gestaucht.
  */
-const gespielteDauer = (takt: Takt, element: Schlag | Pause): Bruch => {
+export const gespielteDauer = (takt: Takt, element: Schlag | Pause): Bruch => {
   const tole = toleAn(takt, element.position);
   return tole ? multipliziere(element.wert, bruch(tole.statt, tole.anzahl)) : element.wert;
 };

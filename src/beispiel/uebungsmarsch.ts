@@ -5,18 +5,18 @@ import { andereHand } from "../model/marsch";
 /**
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
  * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
- * Dupfe, Schlepp, Double, Fuenferruf, Siebnerruf und Dreierruf — auf beiden Haenden, in
- * 6/8 und in 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den
- * Taktstrich und einer aus dem Auftakt in Takt 1.
+ * Dupfe, Schlepp, Double, Fuenferruf mit und ohne Schlepp, Siebnerruf und
+ * Dreierruf — auf beiden Haenden, in 6/8 und in 2/4. Ein Fuenferruf landet im
+ * eigenen Takt, einer ueber den Taktstrich und einer aus dem Auftakt in Takt 1.
  *
- * Der 2/4-Vers beginnt mit dem Auftakt aus ZicZac, Vers 1, der bei der
- * Wiederholung und am Ende des 6/8-Verses ueber eine Pause wiederkehrt. Er
- * mischt Achtel und Sechzehntel unter einem Balken, mit Balkenstummeln — der
- * erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt Pausen: eine Achtelpause
- * vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und am Ende eine
- * Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner Quintole und dem
- * Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet; Takt 4 ist
- * ZicZac, Vers 1, Takt 4 mit seinem Siebnerruf.
+ * Der 2/4-Vers ist ZicZac, Vers 1, ganz: sein Auftakt kehrt bei der
+ * Wiederholung und am Ende des 6/8-Verses ueber eine Pause wieder. Takt 1
+ * mischt Achtel und Sechzehntel unter einem Balken, mit Balkenstummeln; Takt 2
+ * stellt eine Achtelpause vor drei Doubles; Takt 3 hat eine Quintole und den
+ * Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet; Takt 4 einen
+ * Siebnerruf; Takt 5 eine Triole, die nur einen Teil ihrer Gruppe deckt;
+ * Takt 6 einen freien Fuenferruf in Takt 7, der einen Fuenferruf ohne Schlepp
+ * hat; Takt 8 endet auf einer Viertelpause.
  */
 
 const schlag = (
@@ -169,24 +169,54 @@ export const uebungsmarsch: Marsch = {
           pausen: [],
           tolen: [],
         },
-        // Acht Sechzehntel — eine Balkengruppe je Viertel.
-        wechselnd(
-          Array.from({ length: 8 }, () => "Dupfe" as Figur),
-          "rechts",
-          16,
-        ),
-        // Vier Achtel; der Fuenferruf auf der letzten landet auf dem naechsten Taktbeginn.
+        // ZicZac, Vers 1, Takt 5: die erste Zaehlzeit wie in Takt 1, die zweite
+        // eine Triole aus drei Sechzehnteln, dann eine Achtel ausserhalb von ihr.
         {
           schlaege: [
-            schlag("Dupfe", "rechts", [0, 1], [1, 8]),
-            schlag("Dupfe", "links", [1, 8], [1, 8]),
-            schlag("Dupfe", "links", [2, 8], [1, 8]),
+            schlag("Schlepp", "rechts", [0, 1], [1, 8]),
+            schlag("Schlepp", "links", [1, 8], [1, 16]),
+            schlag("Dupfe", "links", [3, 16], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 4], [1, 16]),
+            schlag("Dupfe", "links", [7, 24], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 3], [1, 16]),
+            schlag("Dupfe", "links", [3, 8], [1, 8]),
+          ],
+          pausen: [],
+          tolen: [{ position: bruch(1, 4), anzahl: 3, statt: 2, einheit: bruch(1, 16) }],
+        },
+        // ZicZac, Vers 1, Takt 6: vier Sechzehntel, ein Schlepp, dann ein freier
+        // Fuenferruf, der auf Takt 7 landet. Der Schlepp wird mit dem Wert des
+        // Rufs als Viertel gezeichnet.
+        {
+          schlaege: [
+            schlag("Schlepp", "rechts", [0, 1], [1, 16]),
+            schlag("Dupfe", "links", [1, 16], [1, 16]),
+            schlag("Dupfe", "rechts", [1, 8], [1, 16]),
+            schlag("Schlepp", "links", [3, 16], [1, 16]),
+            schlag("Schlepp", "rechts", [1, 4], [1, 8]),
             schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
           ],
           pausen: [],
           tolen: [],
         },
-        // Viertel und Viertelpause, wie am Ende von ZicZac, Vers 3.
+        // ZicZac, Vers 1, Takt 7 (gelesen am Ende von Vers 3): die Landung des
+        // Fuenferrufs, ein freier Fuenferruf ohne Schlepp links, der links landet,
+        // dann Sechzehntel.
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+            schlag("FuenferrufOhneSchlepp", "links", [1, 16], [1, 16]),
+            schlag("Dupfe", "links", [1, 8], [1, 16]),
+            schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+            schlag("Dupfe", "links", [1, 4], [1, 16]),
+            schlag("Dupfe", "rechts", [5, 16], [1, 16]),
+            schlag("Schlepp", "rechts", [3, 8], [1, 16]),
+            schlag("Dupfe", "links", [7, 16], [1, 16]),
+          ],
+          pausen: [],
+          tolen: [],
+        },
+        // ZicZac, Vers 1, Takt 8: Viertel und Viertelpause.
         {
           schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
           pausen: [pause([1, 4], [1, 4])],

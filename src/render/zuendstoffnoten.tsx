@@ -394,6 +394,16 @@ const zeichne = (glyph: Glyph, waehleTakt?: (starttakt: Starttakt) => void) => {
           {glyph.text}
         </text>
       );
+    case "toleHaken":
+      return (
+        <line
+          x1={glyph.x1}
+          y1={glyph.y1}
+          x2={glyph.x2}
+          y2={glyph.y2}
+          strokeWidth={LINIEN_STAERKE}
+        />
+      );
     case "gerollteDupfe":
       return <GerollteDupfe glyph={glyph} />;
     case "punkt":

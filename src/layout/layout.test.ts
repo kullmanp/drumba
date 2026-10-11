@@ -1266,6 +1266,169 @@ describe("Siebnerruf", () => {
   });
 });
 
+describe("Fuenferruf ohne Schlepp", () => {
+  /**
+   * ZicZac, Vers 1, Takt 7: Sechzehntel rechts, Ruf links frei auf 1/16, Landung
+   * links auf 1/8, Sechzehntel rechts; dann vier Sechzehntel.
+   */
+  const zicZac = marsch(
+    "ZicZac, Takt 7",
+    vers([2, 4], 1, {
+      schlaege: [
+        schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+        schlag("FuenferrufOhneSchlepp", "links", [1, 16], [1, 16]),
+        schlag("Dupfe", "links", [1, 8], [1, 16]),
+        schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+        schlag("Dupfe", "links", [1, 4], [1, 16]),
+        schlag("Dupfe", "rechts", [5, 16], [1, 16]),
+        schlag("Schlepp", "rechts", [3, 8], [1, 16]),
+        schlag("Dupfe", "links", [7, 16], [1, 16]),
+      ],
+    }),
+  );
+  const ruf = () => ({
+    kopf: glyphen(zicZac, "notenkopf")[1]!,
+    hals: glyphen(zicZac, "hals")[1]!,
+  });
+
+  it("traegt keinen Vorschlag und keinen Punkt", () => {
+    const { kopf } = ruf();
+    expect(glyphen(zicZac, "vorschlag").some((v) => v.x === kopf.x)).toBe(false);
+    expect(glyphen(zicZac, "punkt")).toEqual([]);
+  });
+
+  it("setzt einen Wirbel aus zwei Strichen auf seinen Hals", () => {
+    const { hals } = ruf();
+    const [striche, ...weitere] = glyphen(zicZac, "wirbelstriche");
+
+    expect(weitere).toEqual([]);
+    expect(striche!.anzahl).toBe(2);
+    expect(striche!.x).toBe(hals.x);
+  });
+
+  it("steht frei: kleiner, unter der Linie, mit einer Fahne ueber dem Balken der Gruppe", () => {
+    const { kopf, hals } = ruf();
+    const landung = glyphen(zicZac, "notenkopf")[2]!;
+    const linie = glyphen(zicZac, "notenlinie")[0]!;
+    const balken = [...glyphen(zicZac, "balken"), ...glyphen(zicZac, "balkenstummel")];
+
+    expect(kopf.hoehe).toBeLessThan(landung.hoehe);
+    expect(kopf.y - kopf.hoehe / 2).toBeGreaterThan(linie.y);
+    // Der Balken laeuft unter ihm durch, vom Schlag davor zur Landung, ohne an ihm zu enden.
+    expect(balken.some((b) => b.x1 === hals.x || b.x2 === hals.x)).toBe(false);
+    for (const b of balken) expect(hals.yUnten).toBeLessThan(b.y);
+    expect(
+      glyphen(zicZac, "fahne")
+        .filter((f) => f.x === hals.x)
+        .map((f) => f.anzahl),
+    ).toEqual([1]);
+  });
+
+  it("schlaegt den Bogen ueber der Linie zur Landung und schreibt die 5 darueber", () => {
+    const landung = glyphen(zicZac, "notenkopf")[2]!;
+    const [bogen, ...weitere] = glyphen(zicZac, "bogen");
+    const [zahl] = glyphen(zicZac, "rufZahl");
+
+    expect(weitere).toEqual([]);
+    expect(Math.abs(bogen!.x2 - landung.x)).toBeLessThanOrEqual(landung.breite / 2);
+    // Die Landung liegt links, unter der Linie; der Bogen endet trotzdem ueber ihr.
+    expect(bogen!.y2).toBeLessThan(glyphen(zicZac, "notenlinie")[0]!.y);
+    expect(zahl!.text).toBe("5");
+    expect(zahl!.y).toBeLessThan(bogen!.scheitelY);
+  });
+});
+
+describe("Schlag vor einem freien Ruf", () => {
+  /** Die Glyphen eines Typs, die an einem Hals haengen oder ihn ueberspannen. */
+  const amHals = (m: Marsch, haelsIndex: number) => {
+    const hals = glyphen(m, "hals")[haelsIndex]!;
+    return {
+      fahnen: glyphen(m, "fahne").filter((f) => f.x === hals.x),
+      balken: glyphen(m, "balken").filter((b) => b.x1 <= hals.x && hals.x <= b.x2),
+      stummel: glyphen(m, "balkenstummel").filter((b) => b.x1 === hals.x),
+    };
+  };
+
+  it("zeichnet eine Sechzehntel vor einem Siebnerruf als Viertel: ohne Fahne, ungebalkt", () => {
+    const m = marsch(
+      "ZicZac, Takt 4",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+          schlag("Siebnerruf", "links", [1, 16], [3, 16]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+          schlag("Dupfe", "links", [3, 8], [1, 8]),
+        ],
+      }),
+    );
+    const { fahnen, balken, stummel } = amHals(m, 0);
+
+    expect(fahnen).toEqual([]);
+    expect(balken).toEqual([]);
+    expect(stummel).toEqual([]);
+  });
+
+  it("zeichnet eine Achtel vor einem Fuenferruf als Viertel", () => {
+    const m = marsch(
+      "ZicZac, Takt 6",
+      vers(
+        [2, 4],
+        1,
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+            schlag("Schlepp", "rechts", [1, 4], [1, 8]),
+            schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
+          ],
+        },
+        { schlaege: [schlag("Dupfe", "rechts", [0, 1], [2, 4])] },
+      ),
+    );
+    const { fahnen, balken } = amHals(m, 1);
+
+    expect(fahnen).toEqual([]);
+    expect(balken).toEqual([]);
+  });
+
+  it("zeichnet eine Sechzehntel vor einem Fuenferruf ohne Schlepp als Achtel in ihrer Gruppe", () => {
+    const m = marsch(
+      "ZicZac, Takt 7",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 16]),
+          schlag("FuenferrufOhneSchlepp", "links", [1, 16], [1, 16]),
+          schlag("Dupfe", "links", [1, 8], [1, 16]),
+          schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+        ],
+        pausen: [pause([1, 4], [1, 4])],
+      }),
+    );
+    const { fahnen, balken, stummel } = amHals(m, 0);
+
+    expect(fahnen).toEqual([]);
+    expect(balken.map((b) => b.ebene)).toEqual([1]);
+    expect(stummel).toEqual([]);
+    // Die beiden Sechzehntel danach teilen sich den zweiten Balken.
+    expect(amHals(m, 2).balken.map((b) => b.ebene)).toEqual([1, 2]);
+  });
+
+  it("laesst einer Pause vor einem freien Ruf ihren Wert", () => {
+    const m = marsch(
+      "Pause vor dem Ruf",
+      vers(
+        [2, 4],
+        1,
+        {
+          schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+          pausen: [pause([0, 1], [1, 4]), pause([1, 4], [1, 8])],
+        },
+        { schlaege: [schlag("Dupfe", "rechts", [0, 1], [2, 4])] },
+      ),
+    );
+    expect(glyphen(m, "pause").map((p) => p.art)).toEqual(["Viertelpause", "Achtelpause"]);
+  });
+});
+
 describe("Auftakt", () => {
   /** Viertel und Viertelpause: Platz, ueber den der Auftakt bei der Wiederholung faellt. */
   const schluss: Taktentwurf = {
@@ -1456,6 +1619,66 @@ describe("Tole", () => {
     expect(stummel).toHaveLength(1);
     expect(stummel[0]!.x1).toBeCloseTo(haelse[5]!.x, 10);
     expect(stummel[0]!.x2).toBeLessThan(stummel[0]!.x1);
+  });
+});
+
+describe("Haken einer Tole", () => {
+  /** ZicZac, Vers 1, Takt 5: eine Triole aus drei der vier Sechzehntel und Achtel der zweiten Zaehlzeit. */
+  const triole = () =>
+    marsch(
+      "Triole",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Schlepp", "rechts", [0, 1], [1, 8]),
+          schlag("Schlepp", "links", [1, 8], [1, 16]),
+          schlag("Dupfe", "links", [3, 16], [1, 16]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 16]),
+          schlag("Dupfe", "links", [7, 24], [1, 16]),
+          schlag("Dupfe", "rechts", [1, 3], [1, 16]),
+          schlag("Dupfe", "links", [3, 8], [1, 8]),
+        ],
+        tolen: [{ position: bruch(1, 4), anzahl: 3, statt: 2, einheit: bruch(1, 16) }],
+      }),
+    );
+
+  it("setzt bei einer Tole, die nur einen Teil ihrer Gruppe deckt, je einen Haken links und rechts der Zahl", () => {
+    const haelse = glyphen(triole(), "hals");
+    const [zahl] = glyphen(triole(), "toleZahl");
+    const [links, rechts, ...weitere] = glyphen(triole(), "toleHaken");
+
+    expect(zahl!.text).toBe("3");
+    expect(weitere).toEqual([]);
+    expect(links!.x1).toBeCloseTo(haelse[3]!.x, 10);
+    expect(rechts!.x1).toBeCloseTo(haelse[5]!.x, 10);
+    expect(links!.x2).toBeLessThan(zahl!.x);
+    expect(rechts!.x2).toBeGreaterThan(zahl!.x);
+    expect(links!.x2).toBeGreaterThan(links!.x1);
+    expect(rechts!.x2).toBeLessThan(rechts!.x1);
+  });
+
+  it("legt die Haken unter die Balken, die inneren Enden tiefer als die aeusseren", () => {
+    const balken = glyphen(triole(), "balken");
+    for (const haken of glyphen(triole(), "toleHaken")) {
+      for (const b of balken) expect(haken.y1).toBeGreaterThan(b.y);
+      expect(haken.y2).toBeGreaterThan(haken.y1);
+    }
+  });
+
+  it("setzt keine Haken, wenn die Tole ihre ganze Gruppe deckt", () => {
+    const m = marsch(
+      "Quintole",
+      vers([2, 4], 1, {
+        schlaege: [
+          ...dupfenTakt(4, [1, 16]).schlaege,
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Dupfe", "links", [7, 20], [1, 16]),
+          schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+        ],
+        tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
+      }),
+    );
+    expect(glyphen(m, "toleZahl")).toHaveLength(1);
+    expect(glyphen(m, "toleHaken")).toEqual([]);
   });
 });
 

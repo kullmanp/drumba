@@ -130,3 +130,25 @@ Viertel before the free Fünferruf" in Vers 1, Takt 8 — it is Takt 6.
 Source: `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`. On the 2400 px render:
 Takt 5 about y 330, x 880, 160 × 180; Takt 6 about y 340, x 1040, 140 × 200; Vers 3, Takte 7
 and 8 about y 740, x 1150, 170 × 520.
+
+## Comments
+
+**2026-10-11, built (agent), awaiting your check.** Screenshot `drumba-takte-4-8.png` beside the
+ZicZac crops. Where the result departs from the spec:
+
+- A free Ruf no longer breaks its Balkengruppe: the Balken runs under it, from the Schlag
+  before it to its Landung, as in the original. Without that, Takt 7's first Zählzeit fell
+  into an unbeamed Achtel and two beamed Sechzehntel.
+- A Bogen whose Landung is links ends above the Notenlinie, like a links Ruf's Bogen begins
+  (`BOGEN_UEBER_LINIE`). Takt 7 has the first Landung below the line; its Bogen cut through
+  the line.
+- `gespielteDauer` is now exported from the model, so the layout can tell that a Schlag ends
+  exactly where the free Ruf begins, inside a Tole too.
+
+Loose ends:
+
+- The Fünferruf ohne Schlepp stands only a Sechzehntel before its Landung on the time axis,
+  so its Bogen and "5" are cramped. The original makes room for it; Drumba spaces by played
+  time.
+- The hooks' size (`TOLE_ZAHL_HALBBREITE`, `TOLE_ZAHL_HALBHOEHE`) assumes the number's size,
+  which the renderer sets.

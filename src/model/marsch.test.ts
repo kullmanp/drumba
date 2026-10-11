@@ -658,6 +658,64 @@ describe("pruefeMarsch: Siebnerruf und Landung", () => {
   });
 });
 
+describe("pruefeMarsch: Fuenferruf ohne Schlepp und Landung", () => {
+  /** 2/4 wie ZicZac, Vers 1, Takt 7: Sechzehntel, Ruf links auf 1/16, `landung` auf 1/8. */
+  const mitLandung = (landung: Schlag): Marsch =>
+    zweiViertel([
+      dupfe([0, 1], [1, 16]),
+      schlag("FuenferrufOhneSchlepp", "links", [1, 16], [1, 16]),
+      landung,
+      pause([3, 16], [1, 16]),
+      pause([1, 4], [1, 4]),
+    ]);
+
+  it("laesst einen Fuenferruf ohne Schlepp links mit Landung links 1/16 spaeter gelten", () => {
+    const m = mitLandung(schlag("Dupfe", "links", [1, 8], [1, 16]));
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft eine Landung in der anderen Hand und nennt, was der Ruf erwartet", () => {
+    const m = mitLandung(schlag("Dupfe", "rechts", [1, 8], [1, 16]));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/1\/16 spaeter in derselben Hand/);
+  });
+
+  it("verwirft eine Landung, die nicht genau 1/16 nach dem Ruf liegt", () => {
+    const m = zweiViertel([
+      dupfe([0, 1], [1, 16]),
+      schlag("FuenferrufOhneSchlepp", "links", [1, 16], [1, 16]),
+      pause([1, 8], [1, 16]),
+      schlag("Dupfe", "links", [3, 16], [1, 16]),
+      pause([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft eine Landung auf einem Schlepp", () => {
+    const m = mitLandung(schlag("Schlepp", "links", [1, 8], [1, 16]));
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft einen Fuenferruf ohne Schlepp, auf den kein Schlag mehr folgt", () => {
+    const m = zweiViertel([
+      pause([0, 1], [3, 8]),
+      pause([3, 8], [1, 16]),
+      schlag("FuenferrufOhneSchlepp", "links", [7, 16], [1, 16]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+  });
+
+  it("verwirft einen Fuenferruf ohne Schlepp, der keine Sechzehntel ist", () => {
+    const m = zweiViertel([
+      schlag("FuenferrufOhneSchlepp", "links", [0, 1], [1, 8]),
+      schlag("Dupfe", "links", [1, 8], [1, 8]),
+      pause([1, 4], [1, 4]),
+    ]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    expect(() => pruefeMarsch(m)).toThrow(/1\/16/);
+  });
+});
+
 describe("pruefeMarsch: jeder Ruf landet auf einer Dupfe", () => {
   it.each(["Schlepp", "Double"] as const)(
     "verwirft einen Fuenferruf, der auf einem %s landet",

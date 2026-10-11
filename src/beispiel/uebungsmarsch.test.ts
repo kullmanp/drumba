@@ -14,7 +14,15 @@ describe("Uebungsmarsch", () => {
       uebungsmarsch.verse.flatMap((v) => v.takte.flatMap((t) => t.schlaege.map((s) => s.figur))),
     );
     expect(figuren).toEqual(
-      new Set(["Dupfe", "Schlepp", "Double", "Fuenferruf", "Siebnerruf", "Dreierruf"]),
+      new Set([
+        "Dupfe",
+        "Schlepp",
+        "Double",
+        "Fuenferruf",
+        "FuenferrufOhneSchlepp",
+        "Siebnerruf",
+        "Dreierruf",
+      ]),
     );
   });
 
@@ -69,9 +77,19 @@ describe("Uebungsmarsch", () => {
     expect(pausen.map((p) => p.art)).toEqual(["Viertelpause", "Achtelpause", "Viertelpause"]);
   });
 
-  it("zeigt die Quintole aus ZicZac, Vers 1, Takt 3", () => {
+  it("zeigt die Quintole und die Triole aus ZicZac, Vers 1, Takte 3 und 5", () => {
     const zahlen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "toleZahl");
-    expect(zahlen.map((z) => z.text)).toEqual(["5"]);
+    expect(zahlen.map((z) => z.text)).toEqual(["5", "3"]);
+  });
+
+  it("setzt Haken nur um die Triole, die einen Teil ihrer Gruppe deckt", () => {
+    const haken = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "toleHaken");
+    expect(haken).toHaveLength(2);
+  });
+
+  it("ist im 2/4-Vers ZicZac, Vers 1: Auftakt und acht Takte", () => {
+    const zweiViertel = uebungsmarsch.verse.find((v) => v.taktart.nenner === 4);
+    expect(zweiViertel?.takte).toHaveLength(8);
   });
 
   it("zeigt den Tagwachtstreich aus ZicZac mit beiden Dreierruf-Zeichen", () => {

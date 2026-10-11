@@ -1,5 +1,5 @@
 import type { Bruch } from "../model/bruch";
-import { alsZahl, bruch, dividiere, subtrahiere, vergleiche } from "../model/bruch";
+import { addiere, alsZahl, bruch, dividiere, subtrahiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Pause, Schlag, Takt, Taktart, Vers } from "../model/marsch";
 import type { Starttakt } from "../model/starttakt";
 import { pruefeStarttakt } from "../model/starttakt";
@@ -9,6 +9,7 @@ import {
   auftaktBeginn,
   FIGURMERKMALE,
   folgeschlag,
+  gespielteDauer,
   ort,
   pruefeMarsch,
   taktLaenge,
@@ -116,7 +117,8 @@ const BOGEN_HOEHE = 8;
 /**
  * Ein Ruf links hat seinen Kopf unter der Linie; sein Bogen beginnt dann nicht
  * ueber dem Kopf, in der Linie, sondern so weit ueber ihr, am rechten Rand des
- * Kopfes. Nach Augenmass an ZicZac, Vers 1, Takt 4.
+ * Kopfes. Nach Augenmass an ZicZac, Vers 1, Takt 4. Ebenso endet er ueber der
+ * Linie, wenn die Landung links liegt (ZicZac, Vers 3, Takt 7).
  */
 const BOGEN_UEBER_LINIE = 3;
 /** Luft zwischen dem Scheitel des Bogens und der Grundlinie der Ruf-Zahl. */
@@ -126,6 +128,17 @@ const ZAHL_LUFT = 2;
  * Nach Augenmass an ZicZac, Vers 1, Takt 3.
  */
 const TOLE_ZAHL_LUFT = 4;
+/**
+ * Die Haken einer Tole, die nur einen Teil ihrer Balkengruppe deckt: je einer
+ * links und rechts der Zahl, vom aeusseren Hals der Tole schraeg hinab bis
+ * neben die Zahl. `TOLE_ZAHL_HALBBREITE` und `TOLE_ZAHL_HALBHOEHE` messen die
+ * Zahl, wie der Renderer sie setzt, und lassen ihr Luft; `TOLE_HAKEN_ABFALL`
+ * ist, wie weit das innere Ende tiefer liegt als das aeussere. Nach Augenmass
+ * an ZicZac, Vers 1, Takt 5.
+ */
+const TOLE_ZAHL_HALBBREITE = 4;
+const TOLE_ZAHL_HALBHOEHE = 2.5;
+const TOLE_HAKEN_ABFALL = 1.5;
 /**
  * Wie weit ein Balkenstummel vom Hals in seine Gruppe reicht — etwa eine
  * Kopfbreite, nach Augenmass an ZicZac.
@@ -271,6 +284,15 @@ export type Glyph =
       /** Die Oberkante der Zahl, unter dem untersten Balken. */
       readonly y: number;
       readonly text: string;
+    }
+  | {
+      readonly typ: "toleHaken";
+      /** Das aeussere Ende, am ersten oder letzten Hals der Tole. */
+      readonly x1: number;
+      readonly y1: number;
+      /** Das innere Ende, neben der Zahl. */
+      readonly x2: number;
+      readonly y2: number;
     }
   | {
       readonly typ: "gerollteDupfe";
@@ -438,6 +460,11 @@ interface PlatzierterSchlag {
   readonly halsEnde: number;
   /** Ein Ruf, der frei vor seiner Zaehlzeit steht und nicht gebalkt wird. */
   readonly frei: boolean;
+  /**
+   * Der Wert, mit dem der Schlag gezeichnet wird — Fahnen, Balken, Punkt. Sein
+   * notierter Wert, ausser vor einem freien Ruf: dann zusaetzlich dessen Wert.
+   */
+  readonly gezeichneterWert: Bruch;
 }
 
 /** Die Hoehe des Notenkopfes: rechts ueber der Notenlinie, links darunter. */
@@ -452,6 +479,23 @@ const kopfHoehe = (hand: Hand, linieY: number, abstand = KOPF_ABSTAND): number =
 const istFreierRuf = (schlag: Schlag, taktart: Taktart): boolean =>
   FIGURMERKMALE[schlag.figur].ruf !== undefined &&
   dividiere(schlag.position, zaehlzeit(taktart)).nenner !== 1;
+
+/**
+ * Der Wert, mit dem ein Schlag gezeichnet wird. Ein freier Ruf hat keine Zeit
+ * auf dem Papier: das Original schreibt sie dem Schlag davor zu, der so mit
+ * seinem Wert und dem des Rufs gezeichnet wird — eine Sechzehntel vor einem
+ * Siebnerruf als Viertel. Das gilt nur, wenn der Schlag genau dort endet, wo der
+ * Ruf beginnt; eine Pause davor behaelt ihren Wert. Gespielt wird weiter, was
+ * das Modell sagt.
+ */
+const gezeichneterWert = (takt: Takt, index: number, taktart: Taktart): Bruch => {
+  const schlag = takt.schlaege[index]!;
+  const naechster = takt.schlaege[index + 1];
+  const ende = addiere(schlag.position, gespielteDauer(takt, schlag));
+  return naechster && istFreierRuf(naechster, taktart) && vergleiche(ende, naechster.position) === 0
+    ? addiere(schlag.wert, naechster.wert)
+    : schlag.wert;
+};
 
 /**
  * Wie viele Fahnen ein notierter Wert traegt — Achtel eine, Sechzehntel zwei,
@@ -500,7 +544,7 @@ const zaehlzeitIndex = (position: Bruch, zeit: Bruch): number =>
 
 /**
  * Die Balkengruppen eines Taktes: aufeinanderfolgende balkenfaehige Schlaege auf
- * derselben Zaehlzeit. Ein Schlag allein auf seiner Zaehlzeit bekommt keinen
+ * derselben Zaehlzeit, freie Rufe ausgenommen. Ein Schlag allein auf seiner Zaehlzeit bekommt keinen
  * Balken, und ueber den Taktstrich reicht keine Gruppe — sie entstehen je Takt.
  */
 const balkenGruppen = (
@@ -519,7 +563,10 @@ const balkenGruppen = (
   };
 
   for (const platzierter of platzierte) {
-    if (!istBalkenfaehig(platzierter.schlag.wert) || platzierter.frei) {
+    // Ein freier Ruf steht ueber dem Balken, ohne ihn zu unterbrechen: der
+    // Schlag davor und seine Landung koennen eine Gruppe bilden.
+    if (platzierter.frei) continue;
+    if (!istBalkenfaehig(platzierter.gezeichneterWert)) {
       schliesse();
       continue;
     }
@@ -546,7 +593,7 @@ const legeBalken = (
   balkenY: number,
   glyphen: Glyph[],
 ): void => {
-  const tiefsteEbene = Math.max(...gruppe.map((p) => fahnenAnzahl(p.schlag.wert)));
+  const tiefsteEbene = Math.max(...gruppe.map((p) => fahnenAnzahl(p.gezeichneterWert)));
   for (let ebene = 1; ebene <= tiefsteEbene; ebene++) {
     let lauf: PlatzierterSchlag[] = [];
     const schliesse = () => {
@@ -572,7 +619,7 @@ const legeBalken = (
       lauf = [];
     };
     for (const platzierter of gruppe) {
-      if (fahnenAnzahl(platzierter.schlag.wert) >= ebene) lauf.push(platzierter);
+      if (fahnenAnzahl(platzierter.gezeichneterWert) >= ebene) lauf.push(platzierter);
       else schliesse();
     }
     schliesse();
@@ -615,7 +662,7 @@ const legeTakt = (
 ): PlatzierterSchlag[] => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
   const balkenY = linieY + HALS_TIEFE;
-  const platzierte = takt.schlaege.map((schlag): PlatzierterSchlag => {
+  const platzierte = takt.schlaege.map((schlag, index): PlatzierterSchlag => {
     const x = inhaltX + alsZahl(schlag.position) * EINHEITEN_PRO_GANZE;
     const frei = istFreierRuf(schlag, versTaktart);
     const kopf = frei ? FREIER_RUF_KOPF : 1;
@@ -628,13 +675,14 @@ const legeTakt = (
       kopfHoehe: KOPF_HOEHE * kopf,
       halsEnde: frei ? linieY + FREIER_RUF_HALS_TIEFE : balkenY,
       frei,
+      gezeichneterWert: gezeichneterWert(takt, index, versTaktart),
     };
   });
   const gruppen = balkenGruppen(platzierte, versTaktart);
   const gebalkt = new Set(gruppen.flat());
 
   for (const platzierter of platzierte) {
-    const { schlag, x, halsX, kopfY, halsEnde } = platzierter;
+    const { schlag, x, halsX, kopfY, halsEnde, gezeichneterWert: wert } = platzierter;
 
     glyphen.push({ typ: "hals", x: halsX, yOben: kopfY, yUnten: halsEnde });
     glyphen.push({
@@ -671,13 +719,14 @@ const legeTakt = (
         anzahl: WIRBEL_STRICHE,
       });
     }
-    if (istPunktiert(schlag.wert)) {
+    if (istPunktiert(wert)) {
       glyphen.push({ typ: "punkt", x: x + PUNKT_ABSTAND, y: kopfY });
     }
 
     // Was kein Balken traegt, traegt seine Fahnen selbst — sonst laese sich eine
-    // einzelne Achtel wie eine Viertel.
-    const fahnen = fahnenAnzahl(schlag.wert);
+    // einzelne Achtel wie eine Viertel. Ein freier Ruf traegt immer genau eine:
+    // seinen Wert sagt schon seine Figur.
+    const fahnen = platzierter.frei ? 1 : fahnenAnzahl(wert);
     if (fahnen > 0 && !gebalkt.has(platzierter)) {
       glyphen.push({ typ: "fahne", haengtAn: "hals", x: halsX, y: halsEnde, anzahl: fahnen });
     }
@@ -687,16 +736,34 @@ const legeTakt = (
   // Die Zahl einer Tole steht unter den Balken ihrer Schlaege. Wie die Balken
   // haengen, entscheidet weiter die Zaehlzeit; die Tole aendert nur, wo ihre
   // Schlaege stehen, und das sagt schon ihre gespielte Position.
+  // Deckt die Tole nur einen Teil ihrer Balkengruppe, zeigen Haken links und
+  // rechts der Zahl, wie weit sie reicht.
   for (const tole of takt.tolen) {
     const ihre = platzierte.filter((p) => toleAn(takt, p.schlag.position) === tole);
     const [erster] = ihre;
     if (!erster) continue;
-    glyphen.push({
-      typ: "toleZahl",
-      x: (erster.halsX + ihre.at(-1)!.halsX) / 2,
-      y: balkenY + TOLE_ZAHL_LUFT,
-      text: String(tole.anzahl),
-    });
+    const letzter = ihre.at(-1)!;
+    const zahlX = (erster.halsX + letzter.halsX) / 2;
+    const zahlY = balkenY + TOLE_ZAHL_LUFT;
+    glyphen.push({ typ: "toleZahl", x: zahlX, y: zahlY, text: String(tole.anzahl) });
+
+    const gruppe = gruppen.find((g) => g.includes(erster));
+    if (gruppe?.some((p) => !ihre.includes(p))) {
+      const innenY = zahlY + TOLE_ZAHL_HALBHOEHE;
+      const aussenY = innenY - TOLE_HAKEN_ABFALL;
+      for (const [aussenX, seite] of [
+        [erster.halsX, -1],
+        [letzter.halsX, 1],
+      ] as const) {
+        glyphen.push({
+          typ: "toleHaken",
+          x1: aussenX,
+          y1: aussenY,
+          x2: zahlX + seite * TOLE_ZAHL_HALBBREITE,
+          y2: innenY,
+        });
+      }
+    }
   }
   legePausen(takt, inhaltX, linieY, versNummer, taktNummer, glyphen);
 
@@ -736,7 +803,7 @@ const legeBoegen = (
           ? { x1: ruf.x + ruf.kopfBreite / 2, y1: linieY - BOGEN_UEBER_LINIE }
           : { x1: ruf.x + BOGEN_EINZUG * (ruf.kopfBreite / KOPF_BREITE), y1: ueberKopf(ruf) };
       const x2 = landung.x - BOGEN_EINZUG;
-      const y2 = ueberKopf(landung);
+      const y2 = landung.kopfY > linieY ? linieY - BOGEN_UEBER_LINIE : ueberKopf(landung);
       const scheitelY = Math.min(y1, y2) - BOGEN_HOEHE;
       glyphen.push({ typ: "bogen", x1, y1, x2, y2, scheitelY });
       glyphen.push({

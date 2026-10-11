@@ -553,6 +553,72 @@ describe("Siebnerruf", () => {
   });
 });
 
+describe("Fuenferruf ohne Schlepp", () => {
+  /** 2/4: Ruf in `hand` auf 0, Landung in derselben Hand auf 1/16. */
+  const mitRuf = (hand: Hand): Marsch =>
+    marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("FuenferrufOhneSchlepp", hand, [0, 1], [1, 16]),
+          schlag("Dupfe", hand, [1, 16], [7, 16]),
+        ],
+      }),
+    );
+
+  it("spielt vier Schlaege links, links, rechts, rechts, dann die Landung links", () => {
+    expect(abspielplan(mitRuf("links"), 60).map((a) => a.hand)).toEqual([
+      "links",
+      "links",
+      "rechts",
+      "rechts",
+      "links",
+    ]);
+  });
+
+  it("verteilt die vier gleichmaessig, kuerzer als 1/16, ohne Vorschlag", () => {
+    // Tempo 60 in 2/4: eine Viertel dauert 1 s, 1/16 also 0.25 s.
+    const plan = abspielplan(mitRuf("links"), 60);
+    const vier = plan.slice(0, 4).map((a) => a.zeit);
+    const abstaende = vier.slice(1).map((z, i) => z - vier[i]!);
+
+    expect(vier[0]).toBe(0);
+    abstaende.forEach((a) => expect(a).toBeCloseTo(abstaende[0]!, 10));
+    expect(vier.at(-1)!).toBeLessThan(0.25);
+    expect(plan.every((a) => a.lautstaerke === 1)).toBe(true);
+  });
+
+  it("laesst die Landung 1/16 nach dem ersten Schlag erklingen", () => {
+    const plan = abspielplan(mitRuf("links"), 60);
+    expect(plan[4]!.zeit - plan[0]!.zeit).toBeCloseTo(0.25, 10);
+  });
+
+  it("spiegelt den Ruf rechts", () => {
+    expect(abspielplan(mitRuf("rechts"), 60).map((a) => a.hand)).toEqual([
+      "rechts",
+      "rechts",
+      "links",
+      "links",
+      "rechts",
+    ]);
+  });
+
+  it("rollt doppelt so schnell wie ein Fuenferruf in derselben Taktart und demselben Tempo", () => {
+    const fuenfer = marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Fuenferruf", "links", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 8], [3, 8]),
+        ],
+      }),
+    );
+    // Der Vorschlag des Fuenferrufs steht vorne; die beiden ersten Ruf-Schlaege danach.
+    const [, f1, f2] = abspielplan(fuenfer, 100);
+    const [s1, s2] = abspielplan(mitRuf("links"), 100);
+
+    expect(s2!.zeit - s1!.zeit).toBeCloseTo((f2!.zeit - f1!.zeit) / 2, 10);
+  });
+});
+
 describe("Ungueltige Rufe", () => {
   it("spielt einen Siebnerruf mit Landung in derselben Hand nicht, sondern wirft", () => {
     const m = marsch(
