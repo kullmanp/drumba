@@ -9,7 +9,9 @@ import {
   pruefeMarsch,
   taktLaenge,
   taktUeberlauf,
+  vorigerSchlag,
   UngueltigerAuftaktError,
+  UngueltigerDreierrufError,
   UngueltigerRufError,
   UngueltigerTaktError,
   UngueltigeToleError,
@@ -570,5 +572,82 @@ describe("pruefeMarsch: Tole", () => {
       dupfe([1, 4], [1, 4]),
     ]);
     expect(() => pruefeMarsch(m)).toThrow(UngueltigeToleError);
+  });
+});
+
+describe("pruefeMarsch: jeder Ruf landet auf einer Dupfe", () => {
+  it.each(["Schlepp", "Double"] as const)(
+    "verwirft einen Fuenferruf, der auf einem %s landet",
+    (figur) => {
+      const m = zweiViertel([
+        schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+        schlag(figur, "rechts", [1, 8], [1, 8]),
+        pause([1, 4], [1, 4]),
+      ]);
+      expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
+    },
+  );
+});
+
+describe("pruefeMarsch: Dreierruf", () => {
+  it("laesst einen Dreierruf nach einem Schlag gelten, auch ueber den Taktstrich", () => {
+    const m = zweiViertel(
+      [dupfe([0, 1], [1, 4]), schlag("Dreierruf", "links", [1, 4], [1, 4])],
+      [schlag("Dreierruf", "rechts", [0, 1], [2, 4])],
+    );
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("laesst einen Dreierruf auf Takt 1 gelten, wenn der Vers einen Auftakt hat", () => {
+    const m = marschAus(
+      versMitAuftakt(
+        [2, 4],
+        1,
+        [dupfe([3, 8], [1, 8])],
+        [schlag("Dreierruf", "links", [0, 1], [1, 4]), pause([1, 4], [1, 4])],
+      ),
+    );
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft einen Dreierruf auf dem ersten Schlag eines Verses ohne Auftakt", () => {
+    const m = zweiViertel([schlag("Dreierruf", "rechts", [0, 1], [1, 4]), pause([1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerDreierrufError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Takt 1/);
+  });
+
+  it("verwirft einen Dreierruf nach einer Pause, auch ueber den Taktstrich", () => {
+    const imTakt = zweiViertel([
+      pause([0, 1], [1, 4]),
+      schlag("Dreierruf", "rechts", [1, 4], [1, 4]),
+    ]);
+    const ueberDenStrich = zweiViertel(
+      [dupfe([0, 1], [1, 4]), pause([1, 4], [1, 4])],
+      [schlag("Dreierruf", "rechts", [0, 1], [2, 4])],
+    );
+    expect(() => pruefeMarsch(imTakt)).toThrow(UngueltigerDreierrufError);
+    expect(() => pruefeMarsch(ueberDenStrich)).toThrow(UngueltigerDreierrufError);
+    expect(() => pruefeMarsch(ueberDenStrich)).toThrow(/Vers 1, Takt 2/);
+  });
+
+  it("verlangt vom Dreierruf keine Landung nach ihm — er ist selbst seine Landung", () => {
+    const m = zweiViertel([dupfe([0, 1], [1, 4]), schlag("Dreierruf", "links", [1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+});
+
+describe("vorigerSchlag", () => {
+  it("findet den Schlag davor im selben Takt, im vorigen und im Auftakt", () => {
+    const vers = versMitAuftakt(
+      [2, 4],
+      1,
+      [dupfe([3, 8], [1, 8])],
+      [dupfe([0, 1], [1, 4]), dupfe([1, 4], [1, 4])],
+      [dupfe([0, 1], [2, 4])],
+    );
+    expect(vorigerSchlag(vers, 0, 1)).toMatchObject({ taktIndex: 0, index: 0 });
+    expect(vorigerSchlag(vers, 1, 0)).toMatchObject({ taktIndex: 0, index: 1 });
+    expect(vorigerSchlag(vers, 0, 0)).toMatchObject({ taktIndex: AUFTAKT, index: 0 });
+    expect(vorigerSchlag(vers, AUFTAKT, 0)).toBeUndefined();
   });
 });

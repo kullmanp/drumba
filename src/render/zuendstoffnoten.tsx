@@ -81,6 +81,21 @@ const PAUSE_TROPFEN_RADIUS = 2.2;
 const VIERTELPAUSE_HOEHE = 25;
 const VIERTELPAUSE_STAERKE = 3;
 
+/**
+ * Das Zeichen gerollter Dupfe: kleine Koepfe nebeneinander, jeder mit einem
+ * kurzen Hals an der linken Flanke, die Haelse unten durch drei kurze Balken
+ * verbunden — wie ein Paar Zweiunddreissigstel im Kleinen. Ausgemessen am
+ * Original (ZicZac, Vers 1, Takt 3); die Schrift hat das Zeichen nicht.
+ */
+const ROLL_KOPF_BREITE = 5;
+const ROLL_KOPF_HOEHE = 4.4;
+const ROLL_HALS_ABSTAND = 5.9;
+const ROLL_HALS_VERSATZ = 2.2;
+const ROLL_HALS_LAENGE = 15;
+const ROLL_BALKEN = 3;
+const ROLL_BALKEN_STAERKE = 1.3;
+const ROLL_BALKEN_ABSTAND = 3.3;
+
 /** Der Bogen eines Rufs ist feiner als der Hals. */
 const BOGEN_STAERKE = 0.6;
 const RUF_ZAHL_GROESSE = 8;
@@ -169,6 +184,44 @@ const Viertelpause = ({ x, y }: { x: number; y: number }) => {
         fill="none"
         strokeWidth={HALS_STAERKE * 1.4}
       />
+    </>
+  );
+};
+
+const GerollteDupfe = ({ glyph }: { glyph: Extract<Glyph, { typ: "gerollteDupfe" }> }) => {
+  const haelse = Array.from(
+    { length: glyph.anzahl },
+    (_, i) => glyph.x + (i - (glyph.anzahl - 1) / 2) * ROLL_HALS_ABSTAND,
+  );
+  const halsEnde = glyph.y + ROLL_HALS_LAENGE;
+  return (
+    <>
+      {haelse.map((halsX, i) => (
+        <g key={i}>
+          <Notenkopf
+            glyph={{
+              typ: "notenkopf",
+              x: halsX + ROLL_HALS_VERSATZ,
+              y: glyph.y,
+              hand: glyph.hand,
+              breite: ROLL_KOPF_BREITE,
+              hoehe: ROLL_KOPF_HOEHE,
+            }}
+          />
+          <line x1={halsX} y1={glyph.y} x2={halsX} y2={halsEnde} strokeWidth={HALS_STAERKE} />
+        </g>
+      ))}
+      {Array.from({ length: ROLL_BALKEN }, (_, i) => (
+        <rect
+          key={`balken-${i}`}
+          x={haelse[0]!}
+          y={halsEnde - ROLL_BALKEN_STAERKE - i * ROLL_BALKEN_ABSTAND}
+          width={haelse.at(-1)! - haelse[0]!}
+          height={ROLL_BALKEN_STAERKE}
+          fill="currentColor"
+          stroke="none"
+        />
+      ))}
     </>
   );
 };
@@ -304,6 +357,8 @@ const zeichne = (glyph: Glyph) => {
           {glyph.text}
         </text>
       );
+    case "gerollteDupfe":
+      return <GerollteDupfe glyph={glyph} />;
     case "punkt":
       return (
         <circle cx={glyph.x} cy={glyph.y} r={PUNKT_RADIUS} fill="currentColor" stroke="none" />

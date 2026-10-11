@@ -22,9 +22,12 @@ export const andereHand = (hand: Hand): Hand => (hand === "links" ? "rechts" : "
  * genau eine Achtel; seine Landung ist nicht Teil von ihm, sondern der naechste
  * Schlag (ADR-0002) — `pruefeMarsch` stellt sicher, dass sie da ist.
  *
+ * Der Dreierruf steht anders: auf seiner Landung (ADR-0004). Der Schlag ist die
+ * Landung; die beiden gerollten Dupfe davor gehoeren zur Figur.
+ *
  * `Double` ist das Double des Glossars, in ASCII geschrieben.
  */
-export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf";
+export type Figur = "Dupfe" | "Schlepp" | "Double" | "Fuenferruf" | "Dreierruf";
 
 /** Was eine Figur ausmacht, an einer Stelle — Layout und Wiedergabe lesen beide hier. */
 export interface Figurmerkmale {
@@ -39,6 +42,13 @@ export interface Figurmerkmale {
    * darf vor den vorigen Schlag, in den vorigen Takt oder vor den Marsch fallen.
    */
   readonly leiseDupfe?: { readonly vorlauf: Bruch };
+  /**
+   * Bei einem Dreierruf: wie viele gerollte Dupfe in der anderen Hand vor dem
+   * Schlag liegen. Sie nehmen im Takt keinen Platz ein, sondern teilen die
+   * Strecke vom vorigen Schlag bis zu diesem in gleiche Teile. Kein `ruf`: der
+   * Dreierruf ist selbst seine Landung und braucht keine nach sich.
+   */
+  readonly gerollteDupfe?: { readonly anzahl: number };
 }
 
 export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
@@ -48,6 +58,8 @@ export const FIGURMERKMALE: Record<Figur, Figurmerkmale> = {
   Double: { vorschlag: true, leiseDupfe: { vorlauf: bruch(1, 16) } },
   // Der Fuenferruf beginnt mit einem Schlepp und hat darum dessen Vorschlag.
   Fuenferruf: { vorschlag: true, ruf: { schlaege: 5 } },
+  // Zwei gerollte Dupfe in der anderen Hand, dann der Schlag als Landung.
+  Dreierruf: { vorschlag: false, gerollteDupfe: { anzahl: 2 } },
 };
 
 /** Ein Schlag: das atomare Ereignis des Modells. */
@@ -351,7 +363,7 @@ export const ort = (versNummer: number, taktNummer: number): string =>
 
 /**
  * Ein Ruf ohne gueltige Landung: kein Schlag danach, keiner genau eine Achtel
- * spaeter oder einer in der falschen Hand. Ein Ruf, der nirgends landet, wird
+ * spaeter, einer in der falschen Hand oder einer, der keine Dupfe ist. Ein Ruf, der nirgends landet, wird
  * weder gezeichnet noch gespielt.
  */
 export class UngueltigerRufError extends Error {
@@ -364,7 +376,7 @@ export class UngueltigerRufError extends Error {
     super(
       `${ort(versNummer, taktNummer)}: ${schlag.figur} ${schlag.hand} auf ` +
         `${schlag.position.zaehler}/${schlag.position.nenner} hat keine Landung ` +
-        `eine Achtel spaeter in derselben Hand`,
+        `auf einer Dupfe eine Achtel spaeter in derselben Hand`,
     );
     this.name = "UngueltigerRufError";
   }
@@ -455,15 +467,19 @@ const pruefeAuftaktWiederkehr = (marsch: Marsch, versIndex: number): void => {
 export const FUENFERRUF_DAUER = bruch(1, 8);
 
 /**
- * Der Schlag nach einem anderen, mit seinem Abstand in Ganzen — auch ueber den
- * Taktstrich. `taktIndex` und `index` sagen, wo er im Vers steht, damit das
- * Layout ihn bei sich wiederfindet, statt selbst weiterzuzaehlen.
+ * Ein Schlag mit der Stelle, an der er im Vers steht: `taktIndex` und `index`
+ * in dessen Schlaegen, damit das Layout ihn bei sich wiederfindet, statt
+ * selbst weiterzuzaehlen.
  */
-export interface Folgeschlag {
+export interface Schlagstelle {
   readonly schlag: Schlag;
-  readonly abstand: Bruch;
   readonly taktIndex: number;
   readonly index: number;
+}
+
+/** Der Schlag nach einem anderen, mit seinem Abstand in Ganzen — auch ueber den Taktstrich. */
+export interface Folgeschlag extends Schlagstelle {
+  readonly abstand: Bruch;
 }
 
 /**
@@ -506,7 +522,10 @@ export const folgeschlag = (
   };
 };
 
-/** Wirft, wenn der Ruf an dieser Stelle keine gueltige Landung hat. */
+/**
+ * Wirft, wenn der Ruf an dieser Stelle keine gueltige Landung hat. Jeder Ruf
+ * landet auf einer Dupfe (ADR-0004).
+ */
 const pruefeLandung = (vers: Vers, versIndex: number, taktIndex: number, index: number): void => {
   const schlag = taktAn(vers, taktIndex)!.schlaege[index]!;
   if (!FIGURMERKMALE[schlag.figur].ruf) return;
@@ -514,18 +533,109 @@ const pruefeLandung = (vers: Vers, versIndex: number, taktIndex: number, index: 
   if (
     !landung ||
     vergleiche(landung.abstand, FUENFERRUF_DAUER) !== 0 ||
-    landung.schlag.hand !== schlag.hand
+    landung.schlag.hand !== schlag.hand ||
+    landung.schlag.figur !== "Dupfe"
   ) {
     throw new UngueltigerRufError(versIndex + 1, taktIndex + 1, schlag);
   }
 };
 
 /**
+ * Was im Vers unmittelbar vor dem `index`-ten Schlag des Taktes `taktIndex`
+ * steht, ein Schlag oder eine Pause — im selben Takt oder als letztes des
+ * vorigen, vor Takt 1 also im Auftakt. Weiter zurueck muss nicht gesucht
+ * werden: jeder Takt ist lueckenlos gefuellt, und ein Auftakt hat Schlaege.
+ * `undefined` am Anfang des Verses.
+ */
+const vorigesElement = (
+  vers: Vers,
+  taktIndex: number,
+  index: number,
+): { readonly element: Schlag | Pause; readonly taktIndex: number } | undefined => {
+  const takt = taktAn(vers, taktIndex)!;
+  const position = takt.schlaege[index]!.position;
+  const letztes = (elemente: (Schlag | Pause)[]) =>
+    elemente.reduce<Schlag | Pause | undefined>(
+      (bisher, e) => (!bisher || vergleiche(e.position, bisher.position) > 0 ? e : bisher),
+      undefined,
+    );
+
+  const imTakt = letztes(elemente(takt).filter((e) => vergleiche(e.position, position) < 0));
+  if (imTakt) return { element: imTakt, taktIndex };
+  if (taktIndex === AUFTAKT) return undefined;
+  const vorher = taktAn(vers, taktIndex - 1);
+  const imVorigen = vorher && letztes(elemente(vorher));
+  return imVorigen && { element: imVorigen, taktIndex: taktIndex - 1 };
+};
+
+/**
+ * Der Schlag unmittelbar vor dem `index`-ten des Taktes `taktIndex`, in
+ * geschriebener Reihenfolge — auch im vorigen Takt oder im Auftakt.
+ * `undefined`, wenn davor nichts oder eine Pause steht.
+ *
+ * Die eine Stelle, die sagt, wo ein Dreierruf seine gerollten Dupfe herleitet:
+ * `pruefeMarsch` prueft, dass es ihn gibt, das Layout setzt das Zeichen
+ * zwischen ihn und die Landung.
+ */
+export const vorigerSchlag = (
+  vers: Vers,
+  taktIndex: number,
+  index: number,
+): Schlagstelle | undefined => {
+  const vorher = vorigesElement(vers, taktIndex, index);
+  if (!vorher || !("figur" in vorher.element)) return undefined;
+  const schlag = vorher.element;
+  return {
+    schlag,
+    taktIndex: vorher.taktIndex,
+    index: taktAn(vers, vorher.taktIndex)!.schlaege.indexOf(schlag),
+  };
+};
+
+/**
+ * Ein Dreierruf, dessen gerollte Dupfe keinen Anfang haben: kein Schlag vor
+ * ihm im Vers, oder eine Pause. Kein Original zeigt einen solchen; wenn eines
+ * es tut, wird die Regel gelockert.
+ */
+export class UngueltigerDreierrufError extends Error {
+  constructor(
+    readonly versNummer: number,
+    /** Ab 1 gezaehlt; 0 ist der Auftakt. */
+    readonly taktNummer: number,
+    readonly schlag: Schlag,
+    grund: string,
+  ) {
+    super(
+      `${ort(versNummer, taktNummer)}: Dreierruf ${schlag.hand} auf ` +
+        `${alsText(schlag.position)} ${grund}`,
+    );
+    this.name = "UngueltigerDreierrufError";
+  }
+}
+
+/** Wirft, wenn ein Schlag mit gerollten Dupfe keinen Schlag vor sich hat. */
+const pruefeGerollteDupfe = (
+  vers: Vers,
+  versIndex: number,
+  taktIndex: number,
+  index: number,
+): void => {
+  const schlag = taktAn(vers, taktIndex)!.schlaege[index]!;
+  if (!FIGURMERKMALE[schlag.figur].gerollteDupfe) return;
+  const vorher = vorigesElement(vers, taktIndex, index);
+  const fehler = (grund: string) =>
+    new UngueltigerDreierrufError(versIndex + 1, taktIndex + 1, schlag, grund);
+  if (!vorher) throw fehler("hat keinen Schlag vor sich im Vers");
+  if (!("figur" in vorher.element)) throw fehler("folgt auf eine Pause");
+};
+
+/**
  * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jede Tole liegt
  * in ihrem Takt und ist genau gefuellt, jeder Takt passt in seine Taktart und
  * wird von seinen Schlaegen und Pausen genau gefuellt, ein
- * Auftakt hat seine Form und faellt beim Wiedererklingen nur ueber Pausen, und
- * jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
+ * Auftakt hat seine Form und faellt beim Wiedererklingen nur ueber Pausen,
+ * jeder Ruf hat seine Landung auf einer Dupfe, und jeder Dreierruf hat einen
+ * Schlag vor sich. Wirft beim ersten Fehler.
  */
 export const pruefeMarsch = (marsch: Marsch): void => {
   marsch.verse.forEach((vers, versIndex) => {
@@ -547,9 +657,11 @@ export const pruefeMarsch = (marsch: Marsch): void => {
     // Erst wenn alle Takte stehen: der Auftakt kehrt ueber den letzten Takt
     // wieder, und ein Ruf im Auftakt landet in Takt 1.
     if (vers.auftakt) pruefeAuftaktWiederkehr(marsch, versIndex);
-    vers.auftakt?.schlaege.forEach((_, index) => pruefeLandung(vers, versIndex, AUFTAKT, index));
-    vers.takte.forEach((takt, taktIndex) =>
-      takt.schlaege.forEach((_, index) => pruefeLandung(vers, versIndex, taktIndex, index)),
+    [AUFTAKT, ...vers.takte.keys()].forEach((taktIndex) =>
+      taktAn(vers, taktIndex)?.schlaege.forEach((_, index) => {
+        pruefeLandung(vers, versIndex, taktIndex, index);
+        pruefeGerollteDupfe(vers, versIndex, taktIndex, index);
+      }),
     );
   });
 };

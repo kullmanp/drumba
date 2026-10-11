@@ -54,6 +54,12 @@ const VORSCHLAG_LAUTSTAERKE = 0.3;
 const LEISE_DUPFE_LAUTSTAERKE = 0.5;
 
 /**
+ * Die gerollten Dupfe eines Dreierrufs: leiser als seine Landung, aber kaum.
+ * Nach Gehoer gewaehlt.
+ */
+const ROLL_DUPFE_LAUTSTAERKE = 0.75;
+
+/**
  * Die Schlaege, die eine Figur klingen laesst: Hand und Versatz in Ganzen ab
  * ihrer Position. Der Vorschlag eines Schlepps gehoert nicht dazu — sein Abstand
  * ist eine Geste in Sekunden, kein Notenwert.
@@ -87,6 +93,13 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
 
   const sekunden = (zaehlzeiten: Bruch): number => (alsZahl(zaehlzeiten) * 60) / tempo;
   const anschlaege: Anschlag[] = [];
+  /**
+   * Wann der zuletzt gespielte Schlag erklang, in Zaehlzeiten. Die Takte werden
+   * in der Reihenfolge gespielt, in der sie erklingen — auch ein Auftakt, der
+   * bei der Wiederholung ueber das Ende des letzten Taktes faellt —, also ist
+   * es der Schlag, auf den die gerollten Dupfe eines Dreierrufs folgen.
+   */
+  let vorigerSchlag: Bruch | undefined;
 
   /** Spielt die Schlaege eines Taktes, der zur Zeit `beginn` (in Zaehlzeiten) beginnt. */
   const spieleTakt = (takt: Takt, taktart: Taktart, beginn: Bruch): void => {
@@ -95,6 +108,22 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
       const zeitpunkt = (versatz: Bruch): number =>
         sekunden(addiere(beginn, dividiere(addiere(schlag.position, versatz), zaehlzeitLaenge)));
       const merkmale = FIGURMERKMALE[schlag.figur];
+      const hier = addiere(beginn, dividiere(schlag.position, zaehlzeitLaenge));
+      // Die gerollten Dupfe teilen die gespielte Strecke vom vorigen Schlag bis
+      // hierher in gleiche Teile. Dass es den vorigen Schlag gibt, hat
+      // `pruefeMarsch` sichergestellt.
+      if (merkmale.gerollteDupfe && vorigerSchlag) {
+        const { anzahl } = merkmale.gerollteDupfe;
+        const strecke = subtrahiere(hier, vorigerSchlag);
+        for (let i = 1; i <= anzahl; i++) {
+          anschlaege.push({
+            zeit: sekunden(addiere(vorigerSchlag, multipliziere(strecke, bruch(i, anzahl + 1)))),
+            hand: andereHand(schlag.hand),
+            lautstaerke: ROLL_DUPFE_LAUTSTAERKE,
+          });
+        }
+      }
+      vorigerSchlag = hier;
       if (merkmale.leiseDupfe) {
         anschlaege.push({
           zeit: zeitpunkt(subtrahiere(NULL, merkmale.leiseDupfe.vorlauf)),

@@ -5,15 +5,15 @@ import { andereHand } from "../model/marsch";
 /**
  * Ein von Hand gebauter Marsch als Anschauungsmaterial: keine Uebertragung aus
  * dem Repertoire, sondern eine Uebung, die alle Figuren des Modells zeigt —
- * Dupfe, Schlepp, Double und Fuenferruf — auf beiden Haenden, in 6/8 und in
- * 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich und
+ * Dupfe, Schlepp, Double, Fuenferruf und Dreierruf — auf beiden Haenden, in
+ * 6/8 und in 2/4. Ein Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich und
  * einer aus dem Auftakt in Takt 1.
  *
  * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
  * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt
  * Pausen: eine Achtelpause vor drei Doubles wie in ZicZac, Vers 1, Takt 2, und
  * am Ende eine Viertelpause. Takt 3 ist ZicZac, Vers 1, Takt 3 mit seiner
- * Quintole, noch ohne die Dreierrufe des Originals. Er beginnt mit dem Auftakt aus ZicZac, Vers 1,
+ * Quintole und dem Tagwachtstreich, dessen zweiter Dreierruf auf Takt 4 landet. Er beginnt mit dem Auftakt aus ZicZac, Vers 1,
  * der bei der Wiederholung und am Ende des 6/8-Verses ueber eine Pause
  * wiederkehrt.
  */
@@ -139,7 +139,9 @@ export const uebungsmarsch: Marsch = {
         },
         // ZicZac, Vers 1, Takt 3: vier Sechzehntel, dann eine Quintole — Achtel,
         // Sechzehntel, Achtel in der Zeit von vier Sechzehnteln, auf ihren
-        // gespielten Positionen.
+        // gespielten Positionen. Die Sechzehntel ist ein Dreierruf links: mit
+        // der Achtel danach und dem Dreierruf rechts auf dem naechsten
+        // Taktbeginn ein Tagwachtstreich.
         {
           schlaege: [
             schlag("Double", "rechts", [0, 1], [1, 16]),
@@ -147,16 +149,18 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [1, 8], [1, 16]),
             schlag("Dupfe", "rechts", [3, 16], [1, 16]),
             schlag("Dupfe", "links", [1, 4], [1, 8]),
-            schlag("Dupfe", "links", [7, 20], [1, 16]),
+            schlag("Dreierruf", "links", [7, 20], [1, 16]),
             schlag("Dupfe", "rechts", [2, 5], [1, 8]),
           ],
           pausen: [],
           tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
         },
         // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
+        // Der erste Schlag ist ein Dreierruf wie in ZicZac, Vers 1, Takt 4: sein
+        // Zeichen steht vor dem Taktstrich.
         {
           schlaege: [
-            schlag("Dupfe", "rechts", [0, 1], [3, 16]),
+            schlag("Dreierruf", "rechts", [0, 1], [3, 16]),
             schlag("Dupfe", "links", [3, 16], [1, 16]),
             schlag("Dupfe", "rechts", [1, 4], [3, 16]),
             schlag("Dupfe", "links", [7, 16], [1, 16]),

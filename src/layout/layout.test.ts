@@ -1354,3 +1354,78 @@ describe("Tole", () => {
     expect(stummel[0]!.x2).toBeLessThan(stummel[0]!.x1);
   });
 });
+
+describe("Dreierruf", () => {
+  /** Zwei 2/4-Takte: Viertel, dann `figur` links auf der zweiten Viertel | `figur` rechts. */
+  const zweiTakte = (figur: Figur) =>
+    marsch(
+      "Dreierruf",
+      vers(
+        [2, 4],
+        1,
+        {
+          schlaege: [
+            schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+            schlag(figur, "links", [1, 4], [1, 4]),
+          ],
+        },
+        { schlaege: [schlag(figur, "rechts", [0, 1], [2, 4])] },
+      ),
+    );
+
+  it("zeichnet alles, was eine Dupfe an derselben Stelle hat, und dazu je ein Zeichen", () => {
+    const ohneZeichen = layout(zweiTakte("Dreierruf")).glyphen.filter(
+      (g) => g.typ !== "gerollteDupfe" && g.typ !== "titel",
+    );
+    const dupfen = layout(zweiTakte("Dupfe")).glyphen.filter((g) => g.typ !== "titel");
+
+    expect(ohneZeichen).toEqual(dupfen);
+    expect(glyphen(zweiTakte("Dreierruf"), "gerollteDupfe")).toHaveLength(2);
+  });
+
+  it("setzt das Zeichen mittig zwischen den vorigen Notenkopf und den der Landung", () => {
+    const koepfe = glyphen(zweiTakte("Dreierruf"), "notenkopf");
+    const [zeichen] = glyphen(zweiTakte("Dreierruf"), "gerollteDupfe");
+
+    expect(zeichen!.x).toBeCloseTo((koepfe[0]!.x + koepfe[1]!.x) / 2, 10);
+  });
+
+  it("setzt das Zeichen einer Landung am Taktbeginn mittig vor den Taktstrich", () => {
+    const koepfe = glyphen(zweiTakte("Dreierruf"), "notenkopf");
+    const strich = glyphen(zweiTakte("Dreierruf"), "taktstrich")[1]!;
+    const zeichen = glyphen(zweiTakte("Dreierruf"), "gerollteDupfe")[1]!;
+
+    expect(zeichen.x).toBeLessThan(strich.x);
+    expect(zeichen.x).toBeCloseTo((koepfe[1]!.x + strich.x) / 2, 10);
+  });
+
+  it("setzt das Zeichen auf die Seite der anderen Hand, naeher an die Linie als ihr Kopf", () => {
+    const linie = glyphen(zweiTakte("Dreierruf"), "notenlinie")[0]!;
+    const [rechts, links] = glyphen(zweiTakte("Dreierruf"), "notenkopf");
+    const [vorLinks, vorRechts] = glyphen(zweiTakte("Dreierruf"), "gerollteDupfe");
+
+    expect(vorLinks!.hand).toBe("rechts");
+    expect(vorLinks!.y).toBeLessThan(linie.y);
+    expect(vorLinks!.y).toBeGreaterThan(rechts!.y);
+    expect(vorRechts!.hand).toBe("links");
+    expect(vorRechts!.y).toBeGreaterThan(linie.y);
+    expect(vorRechts!.y).toBeLessThan(links!.y);
+  });
+
+  it("setzt das Zeichen eines Dreierrufs auf Takt 1 hinter den Auftakt", () => {
+    const m = marsch(
+      "Aus dem Auftakt",
+      mitAuftakt(
+        [2, 4],
+        1,
+        { schlaege: [schlag("Dupfe", "links", [1, 4], [1, 4])] },
+        { schlaege: [schlag("Dreierruf", "rechts", [0, 1], [2, 4])] },
+      ),
+    );
+    const [auftakt] = glyphen(m, "notenkopf");
+    const [strich] = glyphen(m, "taktstrich");
+    const [zeichen] = glyphen(m, "gerollteDupfe");
+
+    expect(zeichen!.x).toBeCloseTo((auftakt!.x + strich!.x) / 2, 10);
+  });
+});

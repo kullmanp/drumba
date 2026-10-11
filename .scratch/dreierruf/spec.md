@@ -135,3 +135,23 @@ Played timing of the second Zählzeit of Takt 3, in fifths of the Zählzeit:
 
 Reference: `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`, cropped in
 `ziczac-takt3.png` and `ziczac-takt4.png`.
+
+## Comments
+
+**2026-10-11, built (agent), awaiting your check.** Commit "Play and draw the Tagwachtstreich of
+ZicZac Vers 1, Takt 3". Screenshot `drumba-takt3-4.png` beside `ziczac-takt3.png` and
+`ziczac-takt4.png`. Listen to the 2/4 Vers, Takt 3 into Takt 4: the rolled Dupfe are at 0.75
+(`ROLL_DUPFE_LAUTSTAERKE`), to be tuned by ear.
+
+- **Height of the mark.** The spec puts the mark at the other Hand's Notenkopf height. In the
+  crops the small heads sit about half as far from the Notenlinie as a full Kopf, so the layout
+  uses `GEROLLTE_DUPFE_ABSTAND = 0.5 × KOPF_ABSTAND`, on the other Hand's side. The test asserts
+  the side and that the mark is nearer the line than that Hand's Kopf.
+- **Shape of the mark.** The crops show two small Notenköpfe side by side, each on a short
+  Hals, the Hälse joined by three short Balken, rather than two heads stacked one above the
+  other. The renderer draws it that way.
+- The glyph is `gerollteDupfe`, named after the `FIGURMERKMALE` entry `gerollteDupfe: { anzahl:
+2 }` that layout and playback both read.
+- Playback takes the time of whichever Schlag was played last, so on a repeat the gap runs from
+  the replayed Auftakt.
+- The Fünferruf's error message now says the Landung must be a Dupfe.

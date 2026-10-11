@@ -2,6 +2,7 @@ import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, dividiere, subtrahiere, vergleiche } from "../model/bruch";
 import type { Hand, Marsch, Pause, Schlag, Takt, Taktart, Vers } from "../model/marsch";
 import {
+  andereHand,
   AUFTAKT,
   auftaktBeginn,
   FIGURMERKMALE,
@@ -10,6 +11,7 @@ import {
   pruefeMarsch,
   taktLaenge,
   toleAn,
+  vorigerSchlag,
   zaehlzeit,
 } from "../model/marsch";
 
@@ -140,6 +142,13 @@ const FREIER_RUF_KOPF_ABSTAND = 0.6 * KOPF_ABSTAND;
 const FREIER_RUF_HALS_TIEFE = 0.45 * HALS_TIEFE;
 
 /**
+ * Das Zeichen gerollter Dupfe steht auf der Seite der Linie, die seine Hand
+ * sagt, aber naeher an ihr als ein voller Kopf — am Original (ZicZac, Vers 1,
+ * Takt 3) etwa halb so weit.
+ */
+const GEROLLTE_DUPFE_ABSTAND = 0.5 * KOPF_ABSTAND;
+
+/**
  * Die Pausen. Alle stehen auf einer Hoehe unter der Notenlinie, etwa auf
  * Balkenhoehe und gleich, auf welcher Seite die Koepfe daneben stehen — eine
  * Pause hat keine Hand. `PAUSE_TIEFE` ist ihr unteres Ende; wie weit sie nach
@@ -254,6 +263,19 @@ export type Glyph =
       /** Die Oberkante der Zahl, unter dem untersten Balken. */
       readonly y: number;
       readonly text: string;
+    }
+  | {
+      readonly typ: "gerollteDupfe";
+      /**
+       * Das Zeichen eines Dreierrufs: mittig zwischen dem vorigen Notenkopf und
+       * dem der Landung, oder dem Taktstrich, der dazwischen liegt.
+       */
+      readonly x: number;
+      /** Die Mitte seiner kleinen Koepfe, auf der Seite der Hand, die sie spielt. */
+      readonly y: number;
+      readonly hand: Hand;
+      /** Wie viele kleine Koepfe das Zeichen traegt. */
+      readonly anzahl: number;
     }
   | {
       readonly typ: "bogen";
@@ -691,6 +713,47 @@ const legeBoegen = (
 };
 
 /**
+ * Die Zeichen der gerollten Dupfe eines Verses, je vor dem Schlag, zu dem sie
+ * gehoeren: mittig zwischen dem vorigen Notenkopf — den das Modell mit
+ * `vorigerSchlag` nennt — und dem eigenen. Liegt ein Taktstrich dazwischen,
+ * steht das Zeichen mittig zwischen dem vorigen Kopf und dem Taktstrich, im
+ * frueheren Takt (ADR-0004). Es steht auf der Seite der Linie der anderen
+ * Hand, denn diese spielt die gerollten Dupfe.
+ *
+ * `platzierte` und `platzierterAuftakt` wie bei `legeBoegen`; `taktX` sagt, wo
+ * der Taktstrich vor einem Takt steht.
+ */
+const legeGerollteDupfe = (
+  vers: Vers,
+  platzierterAuftakt: readonly PlatzierterSchlag[],
+  platzierte: readonly (readonly PlatzierterSchlag[])[],
+  taktX: (taktIndex: number) => number,
+  linieY: number,
+  glyphen: Glyph[],
+): void => {
+  const platzierterTakt = (taktIndex: number): readonly PlatzierterSchlag[] =>
+    taktIndex === AUFTAKT ? platzierterAuftakt : platzierte[taktIndex]!;
+
+  [AUFTAKT, ...platzierte.keys()].forEach((taktIndex) => {
+    platzierterTakt(taktIndex).forEach((landung, index) => {
+      const merkmale = FIGURMERKMALE[landung.schlag.figur].gerollteDupfe;
+      if (!merkmale) return;
+      const voriger = vorigerSchlag(vers, taktIndex, index)!;
+      const vorigerX = platzierterTakt(voriger.taktIndex)[voriger.index]!.x;
+      const bisX = voriger.taktIndex === taktIndex ? landung.x : taktX(taktIndex);
+      const hand = andereHand(landung.schlag.hand);
+      glyphen.push({
+        typ: "gerollteDupfe",
+        x: (vorigerX + bisX) / 2,
+        y: kopfHoehe(hand, linieY, GEROLLTE_DUPFE_ABSTAND),
+        hand,
+        anzahl: merkmale.anzahl,
+      });
+    });
+  });
+};
+
+/**
  * Die Breite des Auftakts: wie ein Takt sein Innenabstand und dann seine Laenge
  * auf der Zeitachse, von seinem ersten Schlag bis zum Taktende. 0 ohne Auftakt.
  */
@@ -752,6 +815,14 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     );
   }
   legeBoegen(vers, platzierterAuftakt, platzierte, glyphen);
+  legeGerollteDupfe(
+    vers,
+    platzierterAuftakt,
+    platzierte,
+    (taktIndex) => inhaltX + taktIndex * taktBreite(vers.taktart),
+    linieY,
+    glyphen,
+  );
 
   return inhaltX + breite;
 };

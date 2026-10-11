@@ -219,6 +219,110 @@ describe("Double", () => {
   });
 });
 
+describe("Dreierruf", () => {
+  /** Die zwei gerollten Dupfe vor einem Dreierruf: alles, was leiser klingt als voll. */
+  const gerollte = (m: Marsch, tempo: number) =>
+    abspielplan(m, tempo).filter((a) => a.lautstaerke < 1);
+  /** Die Zeiten der vollen Schlaege, ohne die gerollten Dupfe. */
+  const volle = (m: Marsch, tempo: number) =>
+    abspielplan(m, tempo)
+      .filter((a) => a.lautstaerke === 1)
+      .map((a) => a.zeit);
+
+  /** Ein Takt in `taktart`: Viertel rechts, dann ein Dreierruf links auf der zweiten Viertel. */
+  const imTakt = (taktart: [number, number], pausen: Pause[] = []): Marsch =>
+    marsch(
+      vers(taktart, 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+          schlag("Dreierruf", "links", [1, 4], [1, 8]),
+        ],
+        pausen: [pause([3, 8], [1, 8]), ...pausen],
+      }),
+    );
+
+  /** Erwartet die gerollten Dupfe genau auf 1/3 und 2/3 der Strecke von `von` bis `bis`. */
+  const erwarteDrittel = (m: Marsch, tempo: number, von: number, bis: number) => {
+    const [erste, zweite] = gerollte(m, tempo);
+    expect(erste!.zeit).toBeCloseTo(von + (bis - von) / 3, 10);
+    expect(zweite!.zeit).toBeCloseTo(von + (2 * (bis - von)) / 3, 10);
+  };
+
+  it("spielt zwei gerollte Dupfe in der anderen Hand vor der Landung", () => {
+    const [, erste, zweite, landung] = abspielplan(imTakt([2, 4]), 60);
+
+    expect(erste!.hand).toBe("rechts");
+    expect(zweite!.hand).toBe("rechts");
+    expect(landung).toEqual({ zeit: 1, hand: "links", lautstaerke: 1 });
+  });
+
+  it("teilt die Strecke vom vorigen Schlag genau in Drittel, in 2/4", () => {
+    erwarteDrittel(imTakt([2, 4]), 60, 0, 1);
+  });
+
+  it("teilt die Strecke vom vorigen Schlag genau in Drittel, in 6/8", () => {
+    // Tempo 60 in 6/8: eine Viertel dauert 2/3 s.
+    erwarteDrittel(imTakt([6, 8], [pause([1, 2], [1, 4])]), 60, 0, 2 / 3);
+  });
+
+  it("teilt die Strecke ueber den Taktstrich", () => {
+    // 2/4 bei Tempo 60: der vorige Schlag auf 1.5 s, die Landung auf 2 s.
+    const m = marsch(
+      vers([2, 4], 1, dupfenTakt(2, [1, 4]), {
+        schlaege: [schlag("Dreierruf", "rechts", [0, 1], [2, 4])],
+      }),
+    );
+    erwarteDrittel(m, 60, 1, 2);
+    expect(gerollte(m, 60).map((a) => a.hand)).toEqual(["links", "links"]);
+  });
+
+  it("teilt die gespielte Strecke in einer Quintole", () => {
+    // 2/4 bei Tempo 60: die Quintole beginnt auf 1 s, ein Fuenftel davon dauert 0.2 s.
+    const m = marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 4]),
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Dreierruf", "links", [7, 20], [1, 16]),
+          schlag("Dupfe", "rechts", [2, 5], [1, 8]),
+        ],
+        tolen: [{ position: bruch(1, 4), anzahl: 5, statt: 4, einheit: bruch(1, 16) }],
+      }),
+    );
+    erwarteDrittel(m, 60, 1, 1.4);
+  });
+
+  it("nimmt bei der Wiederholung den Auftakt, der vor Takt 1 wieder erklingt", () => {
+    // 2/4 bei Tempo 60: Takt 1 beginnt auf 1 s und dauert 2 s; der Auftakt
+    // erklingt auf 0 s und wieder auf 2 s, eine Viertel vor dem zweiten Takt 1.
+    const m = marsch({
+      ...vers([2, 4], 2, {
+        schlaege: [schlag("Dreierruf", "rechts", [0, 1], [1, 4])],
+        pausen: [pause([1, 4], [1, 4])],
+      }),
+      auftakt: { schlaege: [schlag("Dupfe", "links", [1, 4], [1, 4])], pausen: [], tolen: [] },
+    });
+    const [, , erneut] = volle(m, 60);
+    const zweiterDurchgang = gerollte(m, 60).slice(2);
+
+    expect(erneut).toBeCloseTo(2, 10);
+    expect(zweiterDurchgang[0]!.zeit).toBeCloseTo(2 + 1 / 3, 10);
+    expect(zweiterDurchgang[1]!.zeit).toBeCloseTo(2 + 2 / 3, 10);
+  });
+
+  it("laesst die gerollten Dupfe leiser klingen als die Landung", () => {
+    const [, erste, zweite, landung] = abspielplan(imTakt([2, 4]), 60);
+
+    expect(erste!.lautstaerke).toBeLessThan(landung!.lautstaerke);
+    expect(zweite!.lautstaerke).toBeLessThan(landung!.lautstaerke);
+  });
+
+  it("gibt einer Dupfe keine gerollten Dupfe", () => {
+    const m = marsch(vers([2, 4], 1, dupfenTakt(2, [1, 4])));
+    expect(abspielplan(m, 60)).toHaveLength(2);
+  });
+});
+
 describe("Fuenferruf", () => {
   /** Ein 2/4-Takt: Fuenferruf in `hand` auf der ersten Achtel, Landung auf der zweiten. */
   const mitRuf = (hand: Hand): Marsch =>
