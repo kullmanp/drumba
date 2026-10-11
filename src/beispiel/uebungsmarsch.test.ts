@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { layout } from "../layout/layout";
 import { pruefeMarsch } from "../model/marsch";
+import { abspielplan } from "../playback/abspielplan";
 import { uebungsmarsch } from "./uebungsmarsch";
 
 describe("Uebungsmarsch", () => {
@@ -54,6 +55,15 @@ describe("Uebungsmarsch", () => {
     const sechsAchtel = uebungsmarsch.verse.find((v) => v.taktart.nenner === 8);
     expect(sechsAchtel?.taktart.zaehler).toBe(6);
     expect(layout(uebungsmarsch).glyphen.some((g) => g.typ === "balken")).toBe(true);
+  });
+
+  it("zeigt eine Achtelpause und endet den 2/4-Vers auf einer Viertelpause", () => {
+    const pausen = layout(uebungsmarsch).glyphen.filter((g) => g.typ === "pause");
+    expect(pausen.map((p) => p.art)).toEqual(["Achtelpause", "Viertelpause"]);
+  });
+
+  it("laesst sich spielen", () => {
+    expect(abspielplan(uebungsmarsch, 100).length).toBeGreaterThan(0);
   });
 
   it("laesst sich vollstaendig setzen", () => {

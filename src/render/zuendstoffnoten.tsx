@@ -64,6 +64,20 @@ const WIRBEL_BREITE = 6;
 const WIRBEL_STEIGUNG = 3;
 const WIRBEL_ABSTAND = 3.5;
 const WIRBEL_STAERKE = 1.1;
+/**
+ * Die innere Form der Pausen, vom unteren Ende aus, das das Layout nennt. Ohne
+ * Schriftvorlage, nach Augenmass an ZicZac: die Achtelpause eine schraege
+ * Stange mit einem Haken, dessen Ende ein Tropfen ist, die Sechzehntelpause mit
+ * zweien; die Viertelpause ein Zickzack mit einem Fuss.
+ */
+const PAUSE_HAKEN_ABSTAND = 6;
+const PAUSE_STANGE_SOCKEL = 7;
+const PAUSE_STANGE_NEIGUNG = 0.25;
+const PAUSE_TROPFEN_VERSATZ = 4.5;
+const PAUSE_TROPFEN_RADIUS = 2.2;
+const VIERTELPAUSE_HOEHE = 25;
+const VIERTELPAUSE_STAERKE = 3;
+
 /** Der Bogen eines Rufs ist feiner als der Hals. */
 const BOGEN_STAERKE = 0.6;
 const RUF_ZAHL_GROESSE = 8;
@@ -97,6 +111,60 @@ const Notenkopf = ({ glyph }: { glyph: Extract<Glyph, { typ: "notenkopf" }> }) =
       fill="currentColor"
       stroke="none"
     />
+  );
+};
+
+/** Eine Achtel- oder Sechzehntelpause: eine Stange mit so vielen Haken wie Fahnen. */
+const Hakenpause = ({ x, y, haken }: { x: number; y: number; haken: number }) => {
+  const hoehe = PAUSE_STANGE_SOCKEL + PAUSE_HAKEN_ABSTAND * haken;
+  // Die Stange steigt nach rechts; ihr Fuss steht etwas links der Stelle.
+  const stangeX = (ueberFuss: number) => x - 1 + ueberFuss * PAUSE_STANGE_NEIGUNG;
+  return (
+    <>
+      <line x1={stangeX(0)} y1={y} x2={stangeX(hoehe)} y2={y - hoehe} strokeWidth={HALS_STAERKE} />
+      {Array.from({ length: haken }, (_, i) => {
+        const hakenHoehe = hoehe - i * PAUSE_HAKEN_ABSTAND;
+        const endeX = stangeX(hakenHoehe);
+        const tropfenX = endeX - PAUSE_TROPFEN_VERSATZ;
+        const tropfenY = y - hakenHoehe + 2;
+        return (
+          <g key={i}>
+            <circle cx={tropfenX} cy={tropfenY} r={PAUSE_TROPFEN_RADIUS} fill="currentColor" />
+            <path
+              d={`M ${tropfenX} ${tropfenY + PAUSE_TROPFEN_RADIUS} Q ${endeX - 1.5} ${tropfenY + 1.5} ${endeX} ${y - hakenHoehe}`}
+              fill="none"
+              strokeWidth={HALS_STAERKE}
+            />
+          </g>
+        );
+      })}
+    </>
+  );
+};
+
+/** Die Viertelpause: oben ein Zickzack mit kraeftigem Mittelstrich, unten ein Fuss. */
+const Viertelpause = ({ x, y }: { x: number; y: number }) => {
+  const oben = y - VIERTELPAUSE_HOEHE;
+  return (
+    <>
+      <path
+        d={`M ${x - 1.5} ${oben} L ${x + 2.5} ${oben + 6} M ${x - 1.5} ${oben + 12} L ${x + 1.5} ${oben + 17}`}
+        fill="none"
+        strokeWidth={HALS_STAERKE}
+      />
+      <line
+        x1={x + 2.5}
+        y1={oben + 6}
+        x2={x - 1.5}
+        y2={oben + 12}
+        strokeWidth={VIERTELPAUSE_STAERKE}
+      />
+      <path
+        d={`M ${x - 5.5} ${y - 2} Q ${x - 3} ${y - 7} ${x + 1.5} ${oben + 17} L ${x + 5} ${y - 0.5}`}
+        fill="none"
+        strokeWidth={HALS_STAERKE * 1.4}
+      />
+    </>
   );
 };
 
@@ -220,6 +288,9 @@ const zeichne = (glyph: Glyph) => {
       return (
         <circle cx={glyph.x} cy={glyph.y} r={PUNKT_RADIUS} fill="currentColor" stroke="none" />
       );
+    case "pause":
+      if (glyph.art === "Viertelpause") return <Viertelpause x={glyph.x} y={glyph.y} />;
+      return <Hakenpause x={glyph.x} y={glyph.y} haken={glyph.art === "Achtelpause" ? 1 : 2} />;
     case "balken":
       return balkenRechteck(glyph.x1, glyph.x2, glyph.y, glyph.ebene);
     case "balkenstummel":

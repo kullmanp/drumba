@@ -1,6 +1,6 @@
 import type { Bruch } from "../model/bruch";
 import { alsZahl, bruch, dividiere, vergleiche } from "../model/bruch";
-import type { Hand, Marsch, Schlag, Takt, Taktart, Vers } from "../model/marsch";
+import type { Hand, Marsch, Pause, Schlag, Takt, Taktart, Vers } from "../model/marsch";
 import { FIGURMERKMALE, folgeschlag, pruefeMarsch, taktLaenge, zaehlzeit } from "../model/marsch";
 
 /**
@@ -124,6 +124,25 @@ const FREIER_RUF_KOPF = 0.65;
 const FREIER_RUF_KOPF_ABSTAND = 0.6 * KOPF_ABSTAND;
 const FREIER_RUF_HALS_TIEFE = 0.45 * HALS_TIEFE;
 
+/**
+ * Die Pausen. Alle stehen auf einer Hoehe unter der Notenlinie, etwa auf
+ * Balkenhoehe und gleich, auf welcher Seite die Koepfe daneben stehen — eine
+ * Pause hat keine Hand. `PAUSE_TIEFE` ist ihr unteres Ende; wie weit sie nach
+ * oben reicht, ist ihre innere Form und gehoert dem Renderer. Nach Augenmass an
+ * ZicZac (Vers 1, Takt 2 und das Ende von Vers 3); eine Schriftvorlage fehlt.
+ */
+const PAUSE_TIEFE = 0.9 * HALS_TIEFE;
+/**
+ * Der Punkt einer punktierten Pause: rechts neben ihr, zwischen Notenlinie und
+ * Pausenfuss, fuer jede Pause gleich hoch. Nach Augenmass; eine punktierte
+ * Pause zeigt ZicZac nicht.
+ */
+const PAUSE_PUNKT_ABSTAND = 6;
+const PAUSE_PUNKT_HOEHE = 0.6 * HALS_TIEFE;
+
+/** Die Pausen, die gezeichnet werden koennen — Halbe und Ganze noch nicht. */
+export type Pausenart = "Sechzehntelpause" | "Achtelpause" | "Viertelpause";
+
 export type GlyphTyp = Glyph["typ"];
 
 /** Einfacher Strich oder Wiederholungsklammer. */
@@ -192,6 +211,14 @@ export type Glyph =
     }
   | { readonly typ: "punkt"; readonly x: number; readonly y: number }
   | {
+      readonly typ: "pause";
+      /** Die rhythmische Stelle; die Pause steht mittig darauf. */
+      readonly x: number;
+      /** Ihr unteres Ende, fuer jede Pause gleich tief unter der Notenlinie. */
+      readonly y: number;
+      readonly art: Pausenart;
+    }
+  | {
       readonly typ: "rufZahl";
       /** Die Mitte der Zahl, ueber dem Bogen. */
       readonly x: number;
@@ -236,6 +263,26 @@ export type Glyph =
       readonly zaehler: number;
       readonly nenner: number;
     };
+
+/**
+ * Eine Pause, deren Wert das Layout nicht zeichnen kann — bisher alles ausser
+ * Sechzehntel, Achtel und Viertel, je auch punktiert. Sie faellt auf, statt
+ * still falsch gezeichnet zu werden.
+ */
+export class UnzeichenbarePauseError extends Error {
+  constructor(
+    readonly versNummer: number,
+    readonly taktNummer: number,
+    readonly pause: Pause,
+  ) {
+    super(
+      `Vers ${versNummer}, Takt ${taktNummer}: Pause auf ` +
+        `${pause.position.zaehler}/${pause.position.nenner} mit Wert ` +
+        `${pause.wert.zaehler}/${pause.wert.nenner} kann noch nicht gezeichnet werden`,
+    );
+    this.name = "UnzeichenbarePauseError";
+  }
+}
 
 export interface Layout {
   readonly breite: number;
@@ -348,6 +395,19 @@ const istZweierpotenz = (n: number): boolean => n > 0 && (n & (n - 1)) === 0;
  */
 const istPunktiert = (wert: Bruch): boolean => wert.zaehler === 3 && istZweierpotenz(wert.nenner);
 
+/**
+ * Welche Pause einen Wert zeichnet, punktiert wie unpunktiert. `undefined` fuer
+ * Werte ohne Zeichen, ab der Halben und unter der Sechzehntel.
+ */
+const pausenart = (wert: Bruch): Pausenart | undefined => {
+  const grund = istPunktiert(wert) ? bruch(2 * wert.zaehler, 3 * wert.nenner) : wert;
+  if (grund.zaehler !== 1) return undefined;
+  if (grund.nenner === 4) return "Viertelpause";
+  if (grund.nenner === 8) return "Achtelpause";
+  if (grund.nenner === 16) return "Sechzehntelpause";
+  return undefined;
+};
+
 /** Auf welche Zaehlzeit des Taktes eine Position faellt — exakt, ohne Fliesskomma. */
 const zaehlzeitIndex = (position: Bruch, zeit: Bruch): number =>
   Math.floor((position.zaehler * zeit.nenner) / (position.nenner * zeit.zaehler));
@@ -433,11 +493,38 @@ const legeBalken = (
   }
 };
 
+/**
+ * Die Pausen eines Taktes. Sie nehmen an keiner Balkengruppe teil: die Balken
+ * beginnen und enden an Schlaegen, und eine Pause mitten in einer Zaehlzeit
+ * laesst den Balken ueber sich hinweglaufen. Das Letzte ist an keinem Original
+ * bestaetigt — ZicZac hat keine Pause mitten in einer Zaehlzeit.
+ */
+const legePausen = (
+  takt: Takt,
+  inhaltX: number,
+  linieY: number,
+  versNummer: number,
+  taktNummer: number,
+  glyphen: Glyph[],
+): void => {
+  for (const pause of takt.pausen) {
+    const art = pausenart(pause.wert);
+    if (!art) throw new UnzeichenbarePauseError(versNummer, taktNummer, pause);
+    const x = inhaltX + alsZahl(pause.position) * EINHEITEN_PRO_GANZE;
+    glyphen.push({ typ: "pause", x, y: linieY + PAUSE_TIEFE, art });
+    if (istPunktiert(pause.wert)) {
+      glyphen.push({ typ: "punkt", x: x + PAUSE_PUNKT_ABSTAND, y: linieY + PAUSE_PUNKT_HOEHE });
+    }
+  }
+};
+
 const legeTakt = (
   takt: Takt,
   taktX: number,
   linieY: number,
   versTaktart: Taktart,
+  versNummer: number,
+  taktNummer: number,
   glyphen: Glyph[],
 ): PlatzierterSchlag[] => {
   const inhaltX = taktX + TAKT_INNENABSTAND;
@@ -510,6 +597,7 @@ const legeTakt = (
   }
 
   for (const gruppe of gruppen) legeBalken(gruppe, balkenY, glyphen);
+  legePausen(takt, inhaltX, linieY, versNummer, taktNummer, glyphen);
 
   return platzierte;
 };
@@ -572,7 +660,7 @@ const legeVers = (vers: Vers, nummer: number, linieY: number, glyphen: Glyph[]):
     glyphen.push(
       taktstrich(taktX, linieY, strichartFuer(index, strichAnzahl, vers.wiederholungen)),
     );
-    return legeTakt(takt, taktX, linieY, vers.taktart, glyphen);
+    return legeTakt(takt, taktX, linieY, vers.taktart, nummer, index + 1, glyphen);
   });
 
   if (vers.takte.length > 0) {

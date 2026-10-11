@@ -3,7 +3,7 @@ import { addiere, bruch } from "../model/bruch";
 import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "../model/marsch";
 import type { Glyph, GlyphTyp } from "./layout";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
-import { layout } from "./layout";
+import { layout, UnzeichenbarePauseError } from "./layout";
 
 // --- Halterungen -----------------------------------------------------------
 
@@ -781,6 +781,152 @@ describe("Gemischte Balkengruppe", () => {
     expect(bogen!.x1).toBeLessThan(koepfe[0]!.x + koepfe[0]!.breite / 2);
     expect(bogen!.x2).toBeGreaterThan(koepfe[1]!.x - koepfe[1]!.breite / 2);
     expect(bogen!.x2).toBeLessThan(koepfe[1]!.x + koepfe[1]!.breite / 2);
+  });
+});
+
+describe("Pause", () => {
+  /** 2/4: Achtelpause, links, rechts, links | rechts, Achtelpause, Viertelpause. */
+  const mitPausen = marsch(
+    "Pausen",
+    vers(
+      [2, 4],
+      1,
+      {
+        schlaege: [
+          schlag("Dupfe", "links", [1, 8], [1, 8]),
+          schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+          schlag("Dupfe", "links", [3, 8], [1, 8]),
+        ],
+        pausen: [pause([0, 1], [1, 8])],
+      },
+      {
+        schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 8])],
+        pausen: [pause([1, 8], [1, 8]), pause([1, 4], [1, 4])],
+      },
+    ),
+  );
+
+  it("zeichnet jede Pause mit ihrer Art", () => {
+    expect(glyphen(mitPausen, "pause").map((p) => p.art)).toEqual([
+      "Achtelpause",
+      "Achtelpause",
+      "Viertelpause",
+    ]);
+  });
+
+  it("setzt jede Pause gleich tief unter die Notenlinie, gleich welche Hand daneben spielt", () => {
+    const linie = glyphen(mitPausen, "notenlinie")[0]!;
+    const [erste, ...weitere] = glyphen(mitPausen, "pause");
+
+    expect(erste!.y).toBeGreaterThan(linie.y);
+    for (const p of weitere) expect(p.y).toBeCloseTo(erste!.y, 10);
+  });
+
+  it("reiht die Pausen nach ihrer Position zwischen die Schlaege", () => {
+    const koepfe = glyphen(mitPausen, "notenkopf");
+    const pausen = glyphen(mitPausen, "pause");
+
+    expect(pausen[0]!.x).toBeLessThan(koepfe[0]!.x);
+    expect(pausen[1]!.x).toBeGreaterThan(koepfe[3]!.x);
+    expect(pausen[2]!.x).toBeGreaterThan(pausen[1]!.x);
+    // Gleicher Zeitabstand, gleicher Weg: die Pause steht auf der Zeitachse der Schlaege.
+    expect(koepfe[0]!.x - pausen[0]!.x).toBeCloseTo(koepfe[1]!.x - koepfe[0]!.x, 10);
+  });
+
+  it("laesst eine Pause am Beginn der Zaehlzeit ausserhalb des Balkens", () => {
+    const m = marsch(
+      "Pause vor Sechzehnteln",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [1, 16], [1, 16]),
+          schlag("Dupfe", "links", [1, 8], [1, 16]),
+          schlag("Dupfe", "rechts", [3, 16], [1, 16]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+        pausen: [pause([0, 1], [1, 16])],
+      }),
+    );
+    const haelse = glyphen(m, "hals");
+    const vorne = glyphen(m, "pause")[0]!;
+    const balken = glyphen(m, "balken");
+
+    expect(balken.map((b) => b.ebene)).toEqual([1, 2]);
+    for (const b of balken) {
+      expect(b.x1).toBeCloseTo(haelse[0]!.x, 10);
+      expect(b.x1).toBeGreaterThan(vorne.x);
+    }
+  });
+
+  it("laesst den Balken ueber eine Pause mitten in der Zaehlzeit laufen", () => {
+    const m = marsch(
+      "Pause in der Mitte",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [0, 1], [1, 8]),
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Dupfe", "rechts", [3, 8], [3, 8]),
+        ],
+        pausen: [pause([1, 8], [1, 8])],
+      }),
+    );
+    const haelse = glyphen(m, "hals");
+    const [balken, ...weitere] = glyphen(m, "balken");
+    const mitte = glyphen(m, "pause")[0]!;
+
+    expect(weitere).toEqual([]);
+    expect(balken!.x1).toBeCloseTo(haelse[0]!.x, 10);
+    expect(balken!.x2).toBeCloseTo(haelse[1]!.x, 10);
+    expect(mitte.x).toBeGreaterThan(balken!.x1);
+    expect(mitte.x).toBeLessThan(balken!.x2);
+  });
+
+  it("gibt einer punktierten Pause einen Punkt rechts neben sich", () => {
+    const m = marsch(
+      "Punktierte Pause",
+      vers([6, 8], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [3, 8], [1, 8]),
+          schlag("Dupfe", "links", [1, 2], [1, 8]),
+          schlag("Dupfe", "rechts", [5, 8], [1, 8]),
+        ],
+        pausen: [pause([0, 1], [3, 8])],
+      }),
+    );
+    const [p] = glyphen(m, "pause");
+    const [punkt, ...weitere] = glyphen(m, "punkt");
+    const kopf = glyphen(m, "notenkopf")[0]!;
+    const linie = glyphen(m, "notenlinie")[0]!;
+
+    expect(p!.art).toBe("Viertelpause");
+    expect(weitere).toEqual([]);
+    expect(punkt!.x).toBeGreaterThan(p!.x);
+    expect(punkt!.x).toBeLessThan(kopf.x);
+    expect(punkt!.y).toBeGreaterThan(linie.y);
+    expect(punkt!.y).toBeLessThan(p!.y);
+  });
+
+  it("erkennt die Sechzehntelpause", () => {
+    const m = marsch(
+      "Sechzehntelpause",
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [1, 16], [3, 16]),
+          schlag("Dupfe", "links", [1, 4], [1, 4]),
+        ],
+        pausen: [pause([0, 1], [1, 16])],
+      }),
+    );
+    expect(glyphen(m, "pause").map((p) => p.art)).toEqual(["Sechzehntelpause"]);
+  });
+
+  it("zeichnet eine halbe Pause nicht still, sondern wirft und nennt Vers und Takt", () => {
+    const m = marsch(
+      "Halbe Pause",
+      vers([2, 4], 1, { schlaege: [], pausen: [pause([0, 1], [1, 2])] }),
+    );
+
+    expect(() => layout(m)).toThrow(UnzeichenbarePauseError);
+    expect(() => layout(m)).toThrow(/Vers 1, Takt 1/);
   });
 });
 

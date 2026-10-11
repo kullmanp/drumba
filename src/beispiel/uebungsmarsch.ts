@@ -1,5 +1,5 @@
 import { bruch } from "../model/bruch";
-import type { Figur, Hand, Marsch, Schlag, Takt } from "../model/marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt } from "../model/marsch";
 import { andereHand } from "../model/marsch";
 
 /**
@@ -9,7 +9,9 @@ import { andereHand } from "../model/marsch";
  * Fuenferruf landet im eigenen Takt, einer ueber den Taktstrich.
  *
  * Der 2/4-Vers mischt Achtel und Sechzehntel unter einem Balken, mit
- * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1.
+ * Balkenstummeln — der erste Takt aus ZicZac, Vers 1, Takt 1 — und zeigt
+ * Pausen: eine Achtelpause wie in ZicZac, Vers 1, Takt 2, und am Ende eine
+ * Viertelpause.
  */
 
 const schlag = (
@@ -20,6 +22,11 @@ const schlag = (
 ): Schlag => ({
   figur,
   hand,
+  position: bruch(position[0], position[1]),
+  wert: bruch(wert[0], wert[1]),
+});
+
+const pause = (position: readonly [number, number], wert: readonly [number, number]): Pause => ({
   position: bruch(position[0], position[1]),
   wert: bruch(wert[0], wert[1]),
 });
@@ -93,6 +100,16 @@ export const uebungsmarsch: Marsch = {
           ],
           pausen: [],
         },
+        // ZicZac, Vers 1, Takt 2: Achtelpause, dann drei Achtel — die erste allein
+        // auf ihrer Zaehlzeit mit Fahne, die beiden anderen gebalkt.
+        {
+          schlaege: [
+            schlag("Dupfe", "links", [1, 8], [1, 8]),
+            schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+            schlag("Dupfe", "links", [3, 8], [1, 8]),
+          ],
+          pausen: [pause([0, 1], [1, 8])],
+        },
         // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
         {
           schlaege: [
@@ -119,13 +136,10 @@ export const uebungsmarsch: Marsch = {
           ],
           pausen: [],
         },
-        // Zwei Viertel — ohne Balken, der Schlepp diesmal auf der linken Hand.
+        // Viertel und Viertelpause, wie am Ende von ZicZac, Vers 3.
         {
-          schlaege: [
-            schlag("Dupfe", "rechts", [0, 1], [1, 4]),
-            schlag("Schlepp", "links", [1, 4], [1, 4]),
-          ],
-          pausen: [],
+          schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
+          pausen: [pause([1, 4], [1, 4])],
         },
       ],
     },
