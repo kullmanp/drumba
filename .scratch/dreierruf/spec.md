@@ -140,7 +140,7 @@ Reference: `~/Documents/Privat/Fasnacht/Drummelnote/Originale/ZicZac.pdf`, cropp
 
 **2026-10-11, built (agent), awaiting your check.** Commit "Play and draw the Tagwachtstreich of
 ZicZac Vers 1, Takt 3". Screenshot `drumba-takt3-4.png` beside `ziczac-takt3.png` and
-`ziczac-takt4.png`. Listen to the 2/4 Vers, Takt 3 into Takt 4: the rolled Dupfe are at 0.75
+`ziczac-takt4.png`. Listen to the 2/4 Vers, Takt 3 into Takt 4: the rolled Dupfe were at 0.75
 (`ROLL_DUPFE_LAUTSTAERKE`), to be tuned by ear.
 
 - **Height of the mark.** The spec puts the mark at the other Hand's Notenkopf height. In the
@@ -168,3 +168,6 @@ passed. Rejected findings:
   far" and that the Landung is "always a Dupfe", but a Dreierruf's Landung has Figur
   `Dreierruf`. ADR-0004 says the same. "gerollte Dupfe" is documented on `FIGURMERKMALE`, not
   in the glossary.
+
+**2026-10-11, tuned by ear.** At 0.75 the rolled Dupfe drowned the rhythm. They are now at 0.4,
+between the Vorschlag (0.3) and the Double's soft Dupfe (0.5).

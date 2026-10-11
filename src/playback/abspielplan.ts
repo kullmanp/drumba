@@ -54,10 +54,10 @@ const VORSCHLAG_LAUTSTAERKE = 0.3;
 const LEISE_DUPFE_LAUTSTAERKE = 0.5;
 
 /**
- * Die gerollten Dupfe eines Dreierrufs: leiser als seine Landung, aber kaum.
- * Nach Gehoer gewaehlt.
+ * Die gerollten Dupfe eines Dreierrufs: deutlich leiser als seine Landung, damit
+ * der Rhythmus der Hauptschlaege hoerbar bleibt. Nach Gehoer gewaehlt.
  */
-const ROLL_DUPFE_LAUTSTAERKE = 0.75;
+const ROLL_DUPFE_LAUTSTAERKE = 0.4;
 
 /**
  * Die Schlaege, die eine Figur klingen laesst: Hand und Versatz in Ganzen ab
