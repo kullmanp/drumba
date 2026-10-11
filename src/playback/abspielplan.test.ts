@@ -301,3 +301,70 @@ describe("Ungueltige Rufe", () => {
     expect(() => abspielplan(m, 100)).toThrow(UngueltigerRufError);
   });
 });
+
+describe("Auftakt", () => {
+  /** Viertel und Viertelpause: das Ende, ueber das der Auftakt wiederkehrt. */
+  const schluss: Taktentwurf = {
+    schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])],
+    pausen: [pause([1, 4], [1, 4])],
+  };
+  const mitAuftakt = (
+    taktart: [number, number],
+    wiederholungen: 1 | 2,
+    auftakt: Schlag[],
+    ...takte: Taktentwurf[]
+  ): Vers => ({
+    ...vers(taktart, wiederholungen, ...takte),
+    auftakt: { schlaege: auftakt, pausen: [] },
+  });
+
+  it("beginnt den Marsch mit dem Auftakt; Takt 1 folgt eine Auftaktlaenge spaeter", () => {
+    // 2/4 bei Tempo 60: eine Achtel Auftakt dauert eine halbe Zaehlzeit, 0.5 s.
+    const m = marsch(mitAuftakt([2, 4], 1, [schlag("Dupfe", "links", [3, 8], [1, 8])], schluss));
+    const plan = abspielplan(m, 60);
+
+    expect(plan.map((a) => [a.zeit, a.hand])).toEqual([
+      [0, "links"],
+      [0.5, "rechts"],
+    ]);
+  });
+
+  it("laesst einen Fuenferruf im Auftakt mit seinem Vorschlag vor allem anderen beginnen", () => {
+    const m = marsch(
+      mitAuftakt([2, 4], 1, [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])], schluss),
+    );
+    const [vorschlag, erster, ...rest] = abspielplan(m, 60);
+
+    expect(vorschlag!.zeit).toBeLessThan(0);
+    expect(erster!.zeit).toBe(0);
+    // Die Landung ist der erste Schlag von Takt 1, eine Achtel spaeter.
+    expect(rest.at(-1)!.zeit).toBe(0.5);
+  });
+
+  it("spielt den Auftakt bei der Wiederholung ueber das Ende des letzten Taktes", () => {
+    // 2/4 bei Tempo 60: der Auftakt 0.5 s, jeder Takt 2 s.
+    const m = marsch(mitAuftakt([2, 4], 2, [schlag("Dupfe", "links", [3, 8], [1, 8])], schluss));
+
+    // Auftakt, Takt 1; Auftakt in der letzten Achtel von Takt 1, endet an dessen Ende; Takt 1.
+    expect(zeiten(m, 60)).toEqual([0, 0.5, 2, 2.5]);
+  });
+
+  it("spielt den Auftakt des naechsten Verses ueber das Ende des vorigen, auch in anderer Taktart", () => {
+    // 6/8 bei Tempo 60: ein Takt dauert 2 s. Der 2/4-Auftakt von einer Achtel ist eine halbe
+    // Zaehlzeit, 0.5 s, und endet am Ende des 6/8-Taktes.
+    const m = marsch(
+      vers([6, 8], 1, {
+        schlaege: [schlag("Dupfe", "rechts", [0, 1], [3, 8])],
+        pausen: [pause([3, 8], [3, 8])],
+      }),
+      mitAuftakt([2, 4], 1, [schlag("Dupfe", "links", [3, 8], [1, 8])], schluss),
+    );
+
+    expect(zeiten(m, 60)).toEqual([0, 1.5, 2]);
+  });
+
+  it("spielt einen Vers ohne Auftakt wie bisher", () => {
+    const m = marsch(vers([2, 4], 2, dupfenTakt(2, [1, 4])));
+    expect(zeiten(m, 60)).toEqual([0, 1, 2, 3]);
+  });
+});

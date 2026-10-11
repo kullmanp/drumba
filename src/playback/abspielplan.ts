@@ -1,8 +1,17 @@
 import type { Bruch } from "../model/bruch";
-import { addiere, alsZahl, bruch, dividiere, multipliziere, NULL } from "../model/bruch";
-import type { Hand, Marsch, Schlag } from "../model/marsch";
+import {
+  addiere,
+  alsZahl,
+  bruch,
+  dividiere,
+  multipliziere,
+  NULL,
+  subtrahiere,
+} from "../model/bruch";
+import type { Hand, Marsch, Schlag, Takt, Taktart } from "../model/marsch";
 import {
   andereHand,
+  auftaktBeginn,
   FIGURMERKMALE,
   FUENFERRUF_DAUER,
   pruefeMarsch,
@@ -59,6 +68,12 @@ const figurSchlaege = (schlag: Schlag): { hand: Hand; versatz: Bruch }[] => {
  * Der Abspielplan eines Marsches. `tempo` zaehlt Zaehlzeiten pro Minute, in jeder
  * Taktart: eine punktierte Viertel in 6/8 dauert so lang wie eine Viertel in
  * 2/4. Gerechnet wird in exakten Zaehlzeiten, erst ganz am Ende in Sekunden.
+ *
+ * Ein Auftakt ist das Ende eines Taktes (ADR-0003) und erklingt bei jeder
+ * Ankunft in Takt 1 seines Verses, so dass er genau dort endet, wo Takt 1
+ * beginnt: am Anfang des Marsches vor allem anderen — der Marsch beginnt mit
+ * ihm —, bei der Wiederholung und beim Wechsel aus dem vorigen Vers ueber das
+ * Ende von dessen letztem Takt, das dort nur Pausen haelt.
  */
 export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
   // Ein ueberlaufender Takt oder ein Ruf ohne Landung wird nicht still gespielt.
@@ -66,29 +81,48 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
 
   const sekunden = (zaehlzeiten: Bruch): number => (alsZahl(zaehlzeiten) * 60) / tempo;
   const anschlaege: Anschlag[] = [];
-  let taktbeginn = NULL;
-  for (const vers of marsch.verse) {
-    const zaehlzeitLaenge = zaehlzeit(vers.taktart);
-    // Wiederholungen werden ausgerollt; Voltas und Schluss gibt es noch nicht.
-    const takte = Array.from({ length: vers.wiederholungen }, () => vers.takte).flat();
-    for (const takt of takte) {
-      for (const schlag of takt.schlaege) {
-        const zeitpunkt = (versatz: Bruch): number =>
-          sekunden(
-            addiere(taktbeginn, dividiere(addiere(schlag.position, versatz), zaehlzeitLaenge)),
-          );
-        if (FIGURMERKMALE[schlag.figur].vorschlag) {
-          anschlaege.push({
-            zeit: zeitpunkt(NULL) - VORSCHLAG_VORLAUF,
-            hand: andereHand(schlag.hand),
-            lautstaerke: VORSCHLAG_LAUTSTAERKE,
-          });
-        }
-        for (const { hand, versatz } of figurSchlaege(schlag)) {
-          anschlaege.push({ zeit: zeitpunkt(versatz), hand, lautstaerke: 1 });
-        }
+
+  /** Spielt die Schlaege eines Taktes, der zur Zeit `beginn` (in Zaehlzeiten) beginnt. */
+  const spieleTakt = (takt: Takt, taktart: Taktart, beginn: Bruch): void => {
+    const zaehlzeitLaenge = zaehlzeit(taktart);
+    for (const schlag of takt.schlaege) {
+      const zeitpunkt = (versatz: Bruch): number =>
+        sekunden(addiere(beginn, dividiere(addiere(schlag.position, versatz), zaehlzeitLaenge)));
+      if (FIGURMERKMALE[schlag.figur].vorschlag) {
+        anschlaege.push({
+          zeit: zeitpunkt(NULL) - VORSCHLAG_VORLAUF,
+          hand: andereHand(schlag.hand),
+          lautstaerke: VORSCHLAG_LAUTSTAERKE,
+        });
       }
-      taktbeginn = addiere(taktbeginn, dividiere(taktLaenge(vers.taktart), zaehlzeitLaenge));
+      for (const { hand, versatz } of figurSchlaege(schlag)) {
+        anschlaege.push({ zeit: zeitpunkt(versatz), hand, lautstaerke: 1 });
+      }
+    }
+  };
+
+  // Die Zeit 0 ist der Beginn des ersten Auftakts, falls der erste Vers einen hat.
+  const ersterVers = marsch.verse[0];
+  let taktbeginn =
+    ersterVers?.auftakt === undefined
+      ? NULL
+      : dividiere(
+          subtrahiere(taktLaenge(ersterVers.taktart), auftaktBeginn(ersterVers.auftakt)),
+          zaehlzeit(ersterVers.taktart),
+        );
+  for (const vers of marsch.verse) {
+    const taktZaehlzeiten = dividiere(taktLaenge(vers.taktart), zaehlzeit(vers.taktart));
+    // Wiederholungen werden ausgerollt; Voltas und Schluss gibt es noch nicht.
+    for (let durchgang = 0; durchgang < vers.wiederholungen; durchgang++) {
+      // Der Auftakt steht auf den Positionen eines vollen Taktes, der genau dort
+      // endet, wo Takt 1 beginnt.
+      if (vers.auftakt) {
+        spieleTakt(vers.auftakt, vers.taktart, subtrahiere(taktbeginn, taktZaehlzeiten));
+      }
+      for (const takt of vers.takte) {
+        spieleTakt(takt, vers.taktart, taktbeginn);
+        taktbeginn = addiere(taktbeginn, taktZaehlzeiten);
+      }
     }
   }
   // Bei hohem Tempo faellt ein Vorschlag vor den vorigen Schlag.
