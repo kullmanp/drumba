@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "./bruch";
-import type { Figur, Hand, Marsch, Schlag, Takt } from "./marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt } from "./marsch";
 import {
   andereHand,
   folgeschlag,
+  LueckenhafterTaktError,
   pruefeMarsch,
   taktLaenge,
   taktUeberlauf,
@@ -20,16 +21,21 @@ const schlag = (
   wert: [number, number],
 ): Schlag => ({ figur, hand, position: bruch(...position), wert: bruch(...wert) });
 
+const pause = (position: [number, number], wert: [number, number]): Pause => ({
+  position: bruch(...position),
+  wert: bruch(...wert),
+});
+
+/** Ein Takt aus Schlaegen und Pausen, in beliebiger Mischung hingeschrieben. */
+const takt = (elemente: (Schlag | Pause)[]): Takt => ({
+  schlaege: elemente.filter((e): e is Schlag => "figur" in e),
+  pausen: elemente.filter((e): e is Pause => !("figur" in e)),
+});
+
 /** Ein 2/4-Vers aus den gegebenen Takten. */
-const zweiViertel = (...takte: Schlag[][]): Marsch => ({
+const zweiViertel = (...takte: (Schlag | Pause)[][]): Marsch => ({
   titel: "Test",
-  verse: [
-    {
-      taktart: { zaehler: 2, nenner: 4 },
-      wiederholungen: 1,
-      takte: takte.map((schlaege) => ({ schlaege })),
-    },
-  ],
+  verse: [{ taktart: { zaehler: 2, nenner: 4 }, wiederholungen: 1, takte: takte.map(takt) }],
 });
 
 const dupfe = (position: [number, number], wert: [number, number]): Schlag => ({
@@ -55,33 +61,79 @@ describe("taktUeberlauf", () => {
   const sechsAchtel = { zaehler: 6, nenner: 8 };
 
   it("meldet keinen Ueberlauf fuer einen exakt gefuellten Takt", () => {
-    const takt: Takt = {
-      schlaege: [dupfe([5, 8], [1, 8])],
-    };
+    const takt: Takt = { schlaege: [dupfe([5, 8], [1, 8])], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBeUndefined();
   });
 
+  // Nur der Ueberlauf: dass der halbleere Takt eine Luecke hat, meldet pruefeMarsch.
   it("meldet keinen Ueberlauf fuer einen halbleeren Takt", () => {
-    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8])] };
+    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8])], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBeUndefined();
   });
 
   it("meldet den Schlag, dessen Wert ueber den Takt hinausragt", () => {
     const zuLang = dupfe([5, 8], [1, 4]);
-    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8]), zuLang] };
+    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 8]), zuLang], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuLang);
   });
 
   it("meldet den Schlag, der jenseits des Taktendes beginnt", () => {
     const zuSpaet = dupfe([7, 8], [1, 8]);
-    const takt: Takt = { schlaege: [zuSpaet] };
+    const takt: Takt = { schlaege: [zuSpaet], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuSpaet);
+  });
+
+  it("meldet auch eine Pause, die ueber das Taktende hinausragt", () => {
+    const zuLang = pause([1, 2], [3, 8]);
+    const takt: Takt = { schlaege: [dupfe([0, 1], [1, 2])], pausen: [zuLang] };
+    expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuLang);
   });
 
   it("meldet einen Schlag vor dem Taktbeginn", () => {
     const zuFrueh = dupfe([-1, 8], [1, 8]);
-    const takt: Takt = { schlaege: [zuFrueh] };
+    const takt: Takt = { schlaege: [zuFrueh], pausen: [] };
     expect(taktUeberlauf(takt, sechsAchtel)).toBe(zuFrueh);
+  });
+});
+
+describe("pruefeMarsch: lueckenlos gefuellter Takt", () => {
+  it("laesst einen Takt gelten, den Schlaege und Pausen genau fuellen", () => {
+    const m = zweiViertel([pause([0, 1], [1, 8]), dupfe([1, 8], [1, 8]), dupfe([1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("laesst einen Takt gelten, der nur aus Pausen besteht", () => {
+    const m = zweiViertel([pause([0, 1], [1, 4]), pause([1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).not.toThrow();
+  });
+
+  it("verwirft eine Luecke zwischen zwei Schlaegen und nennt ihre Stelle", () => {
+    const m = zweiViertel([dupfe([0, 1], [1, 8]), dupfe([1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Luecke auf 1\/8/);
+  });
+
+  it("verwirft eine Luecke am Taktende", () => {
+    const m = zweiViertel([dupfe([0, 1], [1, 4])]);
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Luecke auf 1\/4/);
+  });
+
+  it("verwirft einen leeren Takt", () => {
+    const m = zweiViertel([]);
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+  });
+
+  it("verwirft eine Pause, die einen Schlag ueberlappt, und nennt die Stelle", () => {
+    const m = zweiViertel([dupfe([0, 1], [1, 4]), pause([1, 8], [1, 8]), dupfe([1, 4], [1, 4])]);
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Ueberlappung auf 1\/8/);
+  });
+
+  it("benennt Vers und Takt der Luecke", () => {
+    const m = zweiViertel([dupfe([0, 1], [2, 4])], [dupfe([0, 1], [1, 4])]);
+    expect(() => pruefeMarsch(m)).toThrow(LueckenhafterTaktError);
+    expect(() => pruefeMarsch(m)).toThrow(/Vers 1, Takt 2/);
   });
 });
 
@@ -154,19 +206,22 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
     const m = zweiViertel([
       schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
       schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+      pause([1, 4], [1, 4]),
     ]);
     expect(() => pruefeMarsch(m)).not.toThrow();
   });
 
   it("verwirft einen Ruf, auf den kein Schlag mehr folgt", () => {
-    const m = zweiViertel([schlag("Fuenferruf", "rechts", [3, 8], [1, 8])]);
+    const m = zweiViertel([pause([0, 1], [3, 8]), schlag("Fuenferruf", "rechts", [3, 8], [1, 8])]);
     expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
   });
 
   it("verwirft eine Landung, die nicht genau eine Achtel nach dem Ruf liegt", () => {
     const m = zweiViertel([
       schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
+      pause([1, 8], [1, 8]),
       schlag("Dupfe", "rechts", [1, 4], [1, 8]),
+      pause([3, 8], [1, 8]),
     ]);
     expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
   });
@@ -175,6 +230,7 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
     const m = zweiViertel([
       schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
       schlag("Dupfe", "links", [1, 8], [1, 8]),
+      pause([1, 4], [1, 4]),
     ]);
     expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
   });
@@ -190,7 +246,11 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
   it("misst den Abstand ueber den Taktstrich hinweg", () => {
     // Der Ruf liegt eine Viertel vor dem Taktende, die Landung also zu spaet.
     const m = zweiViertel(
-      [schlag("Fuenferruf", "rechts", [1, 4], [1, 8])],
+      [
+        pause([0, 1], [1, 4]),
+        schlag("Fuenferruf", "rechts", [1, 4], [1, 8]),
+        pause([3, 8], [1, 8]),
+      ],
       [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
     );
     expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
@@ -211,6 +271,7 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
     const m = zweiViertel([
       schlag("Fuenferruf", "links", [0, 1], [1, 8]),
       schlag("Dupfe", "links", [1, 8], [1, 8]),
+      pause([1, 4], [1, 4]),
     ]);
     expect(() => pruefeMarsch(m)).not.toThrow();
   });
@@ -218,8 +279,9 @@ describe("pruefeMarsch: Fuenferruf und Landung", () => {
   it("benennt Vers und Takt des Rufs", () => {
     const m = zweiViertel(
       [schlag("Dupfe", "rechts", [0, 1], [2, 4])],
-      [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+      [pause([0, 1], [3, 8]), schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
     );
+    expect(() => pruefeMarsch(m)).toThrow(UngueltigerRufError);
     expect(() => pruefeMarsch(m)).toThrow(/Vers 1.*Takt 2/);
   });
 });

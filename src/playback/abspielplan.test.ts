@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bruch } from "../model/bruch";
-import type { Figur, Hand, Marsch, Schlag, Takt, Vers } from "../model/marsch";
+import type { Figur, Hand, Marsch, Pause, Schlag, Takt, Vers } from "../model/marsch";
 import { UngueltigerRufError, UngueltigerTaktError } from "../model/marsch";
 import { abspielplan, VORSCHLAG_VORLAUF } from "./abspielplan";
 
@@ -18,15 +18,27 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
   schlaege: Array.from({ length: anzahl }, (_, i) =>
     schlag("Dupfe", i % 2 === 0 ? "rechts" : "links", [i * wert[0], wert[1]], wert),
   ),
+  pausen: [],
 });
 
-const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Takt[]): Vers => ({
+/** Ein Takt, wie ihn ein Test hinschreibt: Pausen nur, wo es welche gibt. */
+interface Taktentwurf {
+  readonly schlaege: readonly Schlag[];
+  readonly pausen?: readonly Pause[];
+}
+
+const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Taktentwurf[]): Vers => ({
   taktart: { zaehler: taktart[0], nenner: taktart[1] },
   wiederholungen,
-  takte,
+  takte: takte.map((takt): Takt => ({ pausen: [], ...takt })),
 });
 
 const marsch = (...verse: Vers[]): Marsch => ({ titel: "Test", verse });
+
+const pause = (position: [number, number], wert: [number, number]): Pause => ({
+  position: bruch(...position),
+  wert: bruch(...wert),
+});
 
 const zeiten = (m: Marsch, tempo: number): number[] => abspielplan(m, tempo).map((a) => a.zeit);
 
@@ -190,20 +202,55 @@ describe("Fuenferruf", () => {
   });
 
   it("spielt in 6/8 schneller als in 2/4, weil er immer eine Achtel fuellt", () => {
-    const abstand = (taktart: [number, number]): number => {
+    const abstand = (taktart: [number, number], pausen: Pause[]): number => {
       const m = marsch(
         vers(taktart, 1, {
           schlaege: [
             schlag("Fuenferruf", "rechts", [0, 1], [1, 8]),
             schlag("Dupfe", "rechts", [1, 8], [1, 8]),
           ],
+          pausen,
         }),
       );
       const [, erster, zweiter] = abspielplan(m, 100);
       return zweiter!.zeit - erster!.zeit;
     };
 
-    expect(abstand([6, 8])).toBeLessThan(abstand([2, 4]));
+    const sechsAchtel = abstand([6, 8], [pause([1, 4], [1, 8]), pause([3, 8], [3, 8])]);
+    const zweiViertel = abstand([2, 4], [pause([1, 4], [1, 4])]);
+
+    expect(sechsAchtel).toBeLessThan(zweiViertel);
+  });
+});
+
+describe("Pausen", () => {
+  it("laesst eine Pause still: nur die Schlaege klingen, zu denselben Zeiten", () => {
+    // 2/4 bei Tempo 120: eine Achtel dauert 0.25 s.
+    const m = marsch(
+      vers([2, 4], 1, {
+        schlaege: [
+          schlag("Dupfe", "rechts", [1, 8], [1, 8]),
+          schlag("Dupfe", "links", [1, 4], [1, 8]),
+          schlag("Dupfe", "rechts", [3, 8], [1, 8]),
+        ],
+        pausen: [pause([0, 1], [1, 8])],
+      }),
+    );
+
+    expect(zeiten(m, 120)).toEqual([0.25, 0.5, 0.75]);
+  });
+
+  it("laesst den naechsten Takt nach einer Pause am Taktende nicht frueher beginnen", () => {
+    const m = marsch(
+      vers(
+        [2, 4],
+        1,
+        { schlaege: [schlag("Dupfe", "rechts", [0, 1], [1, 4])], pausen: [pause([1, 4], [1, 4])] },
+        dupfenTakt(2, [1, 4]),
+      ),
+    );
+
+    expect(zeiten(m, 120)).toEqual([0, 1, 1.5]);
   });
 });
 
@@ -217,6 +264,7 @@ describe("Reihenfolge", () => {
           schlag("Dupfe", "rechts", [0, 1], [1, 16]),
           schlag("Schlepp", "links", [1, 16], [1, 16]),
         ],
+        pausen: [pause([1, 8], [1, 8]), pause([1, 4], [1, 4])],
       }),
     );
     const plan = zeiten(m, tempo);
@@ -245,7 +293,10 @@ describe("Ungueltige Takte", () => {
 describe("Ungueltige Rufe", () => {
   it("spielt einen Fuenferruf ohne Landung nicht, sondern wirft", () => {
     const m = marsch(
-      vers([2, 4], 1, { schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])] }),
+      vers([2, 4], 1, {
+        schlaege: [schlag("Fuenferruf", "rechts", [3, 8], [1, 8])],
+        pausen: [pause([0, 1], [3, 8])],
+      }),
     );
     expect(() => abspielplan(m, 100)).toThrow(UngueltigerRufError);
   });

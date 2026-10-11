@@ -50,9 +50,25 @@ export interface Schlag {
   readonly wert: Bruch;
 }
 
-/** Ein Takt: die geordneten Schlaege eines Taktes. */
+/**
+ * Eine Pause: notierte Stille. Wie ein Schlag eine Position und ein Wert im
+ * Takt, aber ohne Figur und ohne Hand. Sie wird ausgeschrieben, nie aus einer
+ * Luecke erschlossen — erst so faellt ein halb leerer Takt als Fehler auf.
+ */
+export interface Pause {
+  /** Exakte Position im Takt, gemessen in Ganzen ab Taktbeginn. */
+  readonly position: Bruch;
+  /** Der notierte Wert, in Ganzen: 1/8 = Achtelpause. */
+  readonly wert: Bruch;
+}
+
+/**
+ * Ein Takt: seine geordneten Schlaege und, als eigene Liste daneben, seine
+ * Pausen. Beide zusammen fuellen ihn lueckenlos.
+ */
 export interface Takt {
   readonly schlaege: readonly Schlag[];
+  readonly pausen: readonly Pause[];
 }
 
 /**
@@ -83,39 +99,91 @@ export interface Marsch {
 /** Die Laenge eines Taktes in Ganzen: 6/8 misst 3/4. */
 export const taktLaenge = (taktart: Taktart): Bruch => bruch(taktart.zaehler, taktart.nenner);
 
+/** Was einen Takt fuellt: seine Schlaege und seine Pausen, in einer Liste. */
+const elemente = (takt: Takt): (Schlag | Pause)[] => [...takt.schlaege, ...takt.pausen];
+
 /**
- * Der erste Schlag, der nicht in den Takt passt — vor dem Beginn oder ueber das
- * Ende hinaus. `undefined`, wenn der Takt gueltig ist. Ein ueberlaufender Takt
- * ist ein Datenfehler und darf nicht still gezeichnet werden.
+ * Der erste Schlag oder die erste Pause, die nicht in den Takt passt — vor dem
+ * Beginn oder ueber das Ende hinaus. `undefined`, wenn der Takt gueltig ist. Ein
+ * ueberlaufender Takt ist ein Datenfehler und darf nicht still gezeichnet werden.
  */
-export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | undefined => {
+export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | Pause | undefined => {
   const laenge = taktLaenge(taktart);
-  return takt.schlaege.find(
-    (schlag) =>
-      vergleiche(schlag.position, NULL) < 0 ||
-      vergleiche(addiere(schlag.position, schlag.wert), laenge) > 0,
+  return elemente(takt).find(
+    (element) =>
+      vergleiche(element.position, NULL) < 0 ||
+      vergleiche(addiere(element.position, element.wert), laenge) > 0,
   );
 };
 
+/** Wie ein Schlag oder eine Pause in einer Fehlermeldung heisst. */
+const benenne = (element: Schlag | Pause): string => ("figur" in element ? element.figur : "Pause");
+
 /**
- * Ein Takt, dessen Schlaege nicht in seine Taktart passen. Solche Daten werden
- * weder gezeichnet noch gespielt — falsch gesetzte Schlaege sollen auffallen,
+ * Ein Takt, dessen Schlaege oder Pausen nicht in seine Taktart passen. Solche
+ * Daten werden weder gezeichnet noch gespielt — falsch Gesetztes soll auffallen,
  * nicht still ueber den Taktstrich hinauslaufen.
  */
 export class UngueltigerTaktError extends Error {
   constructor(
     readonly versNummer: number,
     readonly taktNummer: number,
-    readonly schlag: Schlag,
+    readonly element: Schlag | Pause,
     taktart: Taktart,
   ) {
     super(
-      `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} auf ` +
-        `${schlag.position.zaehler}/${schlag.position.nenner} mit Wert ` +
-        `${schlag.wert.zaehler}/${schlag.wert.nenner} passt nicht in ` +
+      `Vers ${versNummer}, Takt ${taktNummer}: ${benenne(element)} auf ` +
+        `${element.position.zaehler}/${element.position.nenner} mit Wert ` +
+        `${element.wert.zaehler}/${element.wert.nenner} passt nicht in ` +
         `${taktart.zaehler}/${taktart.nenner}`,
     );
     this.name = "UngueltigerTaktError";
+  }
+}
+
+/** Wo ein Takt nicht lueckenlos gefuellt ist: eine Luecke oder eine Ueberlappung. */
+export interface Fuellfehler {
+  readonly art: "Luecke" | "Ueberlappung";
+  /** Wo im Takt, in Ganzen ab Taktbeginn. */
+  readonly stelle: Bruch;
+}
+
+/**
+ * Wo die Schlaege und Pausen eines Taktes, nach Position geordnet, die Strecke
+ * von `beginn` bis `ende` nicht genau fuellen. `undefined`, wenn sie es tun. Der
+ * Beginn ist ein Parameter, weil nicht jeder Takt bei 0 anfaengt.
+ *
+ * Was ueber `ende` hinausragt, meldet sie nicht: das ist ein Ueberlauf, und
+ * `taktUeberlauf` muss vorher gelaufen sein.
+ */
+const fuellfehler = (takt: Takt, beginn: Bruch, ende: Bruch): Fuellfehler | undefined => {
+  const geordnet = elemente(takt).sort((a, b) => vergleiche(a.position, b.position));
+  let bisher = beginn;
+  for (const element of geordnet) {
+    const lage = vergleiche(element.position, bisher);
+    if (lage > 0) return { art: "Luecke", stelle: bisher };
+    if (lage < 0) return { art: "Ueberlappung", stelle: element.position };
+    bisher = addiere(element.position, element.wert);
+  }
+  return vergleiche(bisher, ende) < 0 ? { art: "Luecke", stelle: bisher } : undefined;
+};
+
+/**
+ * Ein Takt, den seine Schlaege und Pausen nicht genau fuellen. Eine Luecke ist
+ * kein stilles Schweigen — wer schweigen will, schreibt eine Pause.
+ */
+export class LueckenhafterTaktError extends Error {
+  constructor(
+    readonly versNummer: number,
+    readonly taktNummer: number,
+    readonly fehler: Fuellfehler,
+  ) {
+    super(
+      `Vers ${versNummer}, Takt ${taktNummer}: ${fehler.art} auf ` +
+        `${fehler.stelle.zaehler}/${fehler.stelle.nenner} — Schlaege und Pausen ` +
+        `muessen den Takt lueckenlos fuellen`,
+    );
+    this.name = "LueckenhafterTaktError";
   }
 }
 
@@ -207,7 +275,8 @@ export const folgeschlag = (
 
 /**
  * Prueft einen Marsch, bevor er gezeichnet oder gespielt wird: jeder Takt passt
- * in seine Taktart, und jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
+ * in seine Taktart und wird von seinen Schlaegen und Pausen genau gefuellt, und
+ * jeder Ruf hat seine Landung. Wirft beim ersten Fehler.
  */
 export const pruefeMarsch = (marsch: Marsch): void => {
   marsch.verse.forEach((vers, versIndex) => {
@@ -216,6 +285,8 @@ export const pruefeMarsch = (marsch: Marsch): void => {
       if (ueberlauf) {
         throw new UngueltigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);
       }
+      const fehler = fuellfehler(takt, NULL, taktLaenge(vers.taktart));
+      if (fehler) throw new LueckenhafterTaktError(versIndex + 1, taktIndex + 1, fehler);
       takt.schlaege.forEach((schlag, index) => {
         if (!FIGURMERKMALE[schlag.figur].ruf) return;
         const landung = folgeschlag(vers, taktIndex, index);

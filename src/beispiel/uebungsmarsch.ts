@@ -29,6 +29,7 @@ const wechselnd = (figuren: readonly Figur[], beginn: Hand, nenner: number): Tak
   schlaege: figuren.map((figur, i) =>
     schlag(figur, i % 2 === 0 ? beginn : andereHand(beginn), [i, nenner], [1, nenner]),
   ),
+  pausen: [],
 });
 
 export const uebungsmarsch: Marsch = {
@@ -52,6 +53,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [4, 8], [1, 8]),
             schlag("Dupfe", "links", [5, 8], [1, 8]),
           ],
+          pausen: [],
         },
         // Punktierte Viertel ueber die erste Zaehlzeit, dann drei Achtel.
         {
@@ -61,6 +63,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [4, 8], [1, 8]),
             schlag("Dupfe", "links", [5, 8], [1, 8]),
           ],
+          pausen: [],
         },
         // Zwei punktierte Viertel — ohne Balken.
         {
@@ -68,6 +71,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [0, 1], [3, 8]),
             schlag("Schlepp", "links", [3, 8], [3, 8]),
           ],
+          pausen: [],
         },
       ],
     },
@@ -87,6 +91,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [5, 16], [1, 8]),
             schlag("Schlepp", "rechts", [7, 16], [1, 16]),
           ],
+          pausen: [],
         },
         // Punktierte Achtel und Sechzehntel, zweimal — der Stummel zeigt zum Punkt.
         {
@@ -96,6 +101,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [1, 4], [3, 16]),
             schlag("Dupfe", "links", [7, 16], [1, 16]),
           ],
+          pausen: [],
         },
         // Acht Sechzehntel — eine Balkengruppe je Viertel.
         wechselnd(
@@ -111,6 +117,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "links", [2, 8], [1, 8]),
             schlag("Fuenferruf", "rechts", [3, 8], [1, 8]),
           ],
+          pausen: [],
         },
         // Zwei Viertel — ohne Balken, der Schlepp diesmal auf der linken Hand.
         {
@@ -118,6 +125,7 @@ export const uebungsmarsch: Marsch = {
             schlag("Dupfe", "rechts", [0, 1], [1, 4]),
             schlag("Schlepp", "links", [1, 4], [1, 4]),
           ],
+          pausen: [],
         },
       ],
     },
