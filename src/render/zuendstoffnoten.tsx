@@ -18,11 +18,11 @@ import type { Marsch } from "../model/marsch";
  * Layouts umgerechnet. Sie sind viel feiner, als sie vorher waren: der Hals
  * misst rund ein Zehntel der Kopfhöhe, nicht ein Viertel.
  */
-const HALS_STAERKE = 0.82;
-const LINIEN_STAERKE = 0.71;
+const HALS_STÄRKE = 0.82;
+const LINIEN_STÄRKE = 0.71;
 /** Noch ungeprüft: die Vorlage zeigt keinen Schlepp. Vorerst wie der Hals. */
-const VORSCHLAG_STAERKE = 0.82;
-const KLAMMER_STAERKE = 1.54;
+const VORSCHLAG_STÄRKE = 0.82;
+const KLAMMER_STÄRKE = 1.54;
 const KLAMMER_PUNKT = 1.06;
 /**
  * Die Neigung des Notenkopfes. Der Kopf ist eine Ellipse, die nach rechts oben
@@ -36,8 +36,8 @@ const PUNKT_RADIUS = 1.5;
  * Die Balken hängen an den Halsenden und stapeln sich von dort nach *oben*,
  * zur Notenlinie hin — der unterste liegt auf der Höhe, die das Layout nennt.
  */
-const BALKEN_STAERKE = 3.76;
-const BALKEN_LUECKE = 2.5;
+const BALKEN_STÄRKE = 3.76;
+const BALKEN_LÜCKE = 2.5;
 const FAHNE_BREITE = 7;
 /** Die Fahne hängt am unteren Halsende und schwingt nach rechts oben aus. */
 const FAHNE_STEIGUNG = 6;
@@ -49,17 +49,17 @@ const FAHNE_ABSTAND = 5;
  * aufgelöst; der Renderer bekommt vom Layout nur die Box und leitet den Rest
  * selbst ab, damit die Grösse an genau einer Stelle steht.
  */
-const kopfAchsen = (breite: number, hoehe: number) => {
+const kopfAchsen = (breite: number, höhe: number) => {
   const bogen = (KOPF_NEIGUNG * Math.PI) / 180;
   const c = Math.cos(bogen) ** 2;
   const s = Math.sin(bogen) ** 2;
   const w = (breite / 2) ** 2;
-  const h = (hoehe / 2) ** 2;
+  const h = (höhe / 2) ** 2;
   return { rx: Math.sqrt((w * c - h * s) / (c - s)), ry: Math.sqrt((h * c - w * s) / (c - s)) };
 };
 
 const Notenkopf = ({ glyph }: { glyph: Extract<Glyph, { typ: "notenkopf" }> }) => {
-  const { rx, ry } = kopfAchsen(glyph.breite, glyph.hoehe);
+  const { rx, ry } = kopfAchsen(glyph.breite, glyph.höhe);
   // Negativ, weil die y-Achse im SVG nach unten zeigt: der Kopf kippt nach
   // rechts *oben*.
   return (
@@ -84,7 +84,7 @@ const Taktstrich = ({ glyph }: { glyph: Extract<Glyph, { typ: "taktstrich" }> })
         y1={glyph.yOben}
         x2={x}
         y2={glyph.yUnten}
-        strokeWidth={i === 0 ? LINIEN_STAERKE : KLAMMER_STAERKE}
+        strokeWidth={i === 0 ? LINIEN_STÄRKE : KLAMMER_STÄRKE}
       />
     ))}
     {glyph.punkte.map((punkt, i) => (
@@ -111,7 +111,7 @@ const zeichne = (glyph: Glyph) => {
       return (
         <text x={glyph.x} fontSize={14} fontWeight={600} fill="currentColor" textAnchor="middle">
           <tspan x={glyph.x} y={glyph.y - 8}>
-            {glyph.zaehler}
+            {glyph.zähler}
           </tspan>
           <tspan x={glyph.x} y={glyph.y + 8}>
             {glyph.nenner}
@@ -120,7 +120,7 @@ const zeichne = (glyph: Glyph) => {
       );
     case "notenlinie":
       return (
-        <line x1={glyph.x1} y1={glyph.y} x2={glyph.x2} y2={glyph.y} strokeWidth={LINIEN_STAERKE} />
+        <line x1={glyph.x1} y1={glyph.y} x2={glyph.x2} y2={glyph.y} strokeWidth={LINIEN_STÄRKE} />
       );
     case "taktstrich":
       return <Taktstrich glyph={glyph} />;
@@ -133,7 +133,7 @@ const zeichne = (glyph: Glyph) => {
           y1={glyph.yOben}
           x2={glyph.x}
           y2={glyph.yUnten}
-          strokeWidth={HALS_STAERKE}
+          strokeWidth={HALS_STÄRKE}
         />
       );
     case "vorschlag":
@@ -143,7 +143,7 @@ const zeichne = (glyph: Glyph) => {
           y1={glyph.yOben}
           x2={glyph.x}
           y2={glyph.yUnten}
-          strokeWidth={VORSCHLAG_STAERKE}
+          strokeWidth={VORSCHLAG_STÄRKE}
         />
       );
     case "punkt":
@@ -157,9 +157,9 @@ const zeichne = (glyph: Glyph) => {
             <rect
               key={i}
               x={glyph.x1}
-              y={glyph.y - BALKEN_STAERKE - i * (BALKEN_STAERKE + BALKEN_LUECKE)}
+              y={glyph.y - BALKEN_STÄRKE - i * (BALKEN_STÄRKE + BALKEN_LÜCKE)}
               width={glyph.x2 - glyph.x1}
-              height={BALKEN_STAERKE}
+              height={BALKEN_STÄRKE}
               fill="currentColor"
               stroke="none"
             />
@@ -176,7 +176,7 @@ const zeichne = (glyph: Glyph) => {
               y1={glyph.y - i * FAHNE_ABSTAND}
               x2={glyph.x + FAHNE_BREITE}
               y2={glyph.y - i * FAHNE_ABSTAND - FAHNE_STEIGUNG}
-              strokeWidth={HALS_STAERKE}
+              strokeWidth={HALS_STÄRKE}
             />
           ))}
         </>
@@ -191,13 +191,13 @@ export interface ZündstoffnotenProps {
 }
 
 export const Zündstoffnoten = ({ marsch, skalierung = 1.6 }: ZündstoffnotenProps) => {
-  const { breite, hoehe, glyphen } = layout(marsch);
+  const { breite, höhe, glyphen } = layout(marsch);
 
   return (
     <svg
       width={breite * skalierung}
-      height={hoehe * skalierung}
-      viewBox={`0 0 ${breite} ${hoehe}`}
+      height={höhe * skalierung}
+      viewBox={`0 0 ${breite} ${höhe}`}
       role="img"
       aria-label={`${marsch.titel} in Zündstoffnoten`}
       stroke="currentColor"

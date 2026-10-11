@@ -21,7 +21,7 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
 });
 
 const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Takt[]): Vers => ({
-  taktart: { zaehler: taktart[0], nenner: taktart[1] },
+  taktart: { zähler: taktart[0], nenner: taktart[1] },
   wiederholungen,
   takte,
 });
@@ -112,7 +112,7 @@ describe("Schlepp", () => {
     // Tempo 60: die zweite Viertel liegt bei 1 s.
     const [, , hauptschlag] = abspielplan(mitSchlepp, 60);
 
-    expect(hauptschlag).toEqual({ zeit: 1, hand: "links", lautstaerke: 1 });
+    expect(hauptschlag).toEqual({ zeit: 1, hand: "links", lautstärke: 1 });
   });
 
   it("setzt einen leiseren Vorschlag in der anderen Hand kurz davor", () => {
@@ -121,8 +121,8 @@ describe("Schlepp", () => {
     expect(vorschlag!.hand).toBe("rechts");
     expect(vorschlag!.zeit).toBeLessThan(hauptschlag!.zeit);
     expect(vorschlag!.zeit).toBeGreaterThan(dupfe!.zeit);
-    expect(vorschlag!.lautstaerke).toBeLessThan(hauptschlag!.lautstaerke);
-    expect(vorschlag!.lautstaerke).toBeGreaterThan(0);
+    expect(vorschlag!.lautstärke).toBeLessThan(hauptschlag!.lautstärke);
+    expect(vorschlag!.lautstärke).toBeGreaterThan(0);
   });
 
   it("hält den Abstand des Vorschlags bei jedem Tempo gleich", () => {
@@ -164,16 +164,16 @@ describe("Reihenfolge", () => {
 
 describe("Ungültige Takte", () => {
   // Fünf Achtel in einem 2/4-Takt, im zweiten Vers.
-  const ueberlaufender = marsch(
+  const überlaufender = marsch(
     vers([6, 8], 1, dupfenTakt(6, [1, 8])),
     vers([2, 4], 1, dupfenTakt(5, [1, 8])),
   );
 
   it("spielt einen überlaufenden Takt nicht still, sondern wirft", () => {
-    expect(() => abspielplan(ueberlaufender, 100)).toThrow(UngültigerTaktError);
+    expect(() => abspielplan(überlaufender, 100)).toThrow(UngültigerTaktError);
   });
 
   it("benennt Vers und Takt des Fehlers", () => {
-    expect(() => abspielplan(ueberlaufender, 100)).toThrow(/Vers 2.*Takt 1/);
+    expect(() => abspielplan(überlaufender, 100)).toThrow(/Vers 2.*Takt 1/);
   });
 });

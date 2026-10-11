@@ -22,7 +22,7 @@ const dupfenTakt = (anzahl: number, wert: [number, number]): Takt => ({
 });
 
 const vers = (taktart: [number, number], wiederholungen: 1 | 2, ...takte: Takt[]): Vers => ({
-  taktart: { zaehler: taktart[0], nenner: taktart[1] },
+  taktart: { zähler: taktart[0], nenner: taktart[1] },
   wiederholungen,
   takte,
 });
@@ -35,7 +35,7 @@ const glyphen = <T extends GlyphTyp>(m: Marsch, typ: T): GlyphVom<T>[] =>
   layout(m).glyphen.filter((g): g is GlyphVom<T> => g.typ === typ);
 
 /** Die Abstände zwischen aufeinanderfolgenden Werten. */
-const abstaende = (werte: number[]): number[] => werte.slice(1).map((wert, i) => wert - werte[i]!);
+const abstände = (werte: number[]): number[] => werte.slice(1).map((wert, i) => wert - werte[i]!);
 
 // --- Tests -----------------------------------------------------------------
 
@@ -66,25 +66,25 @@ describe("Notenlinie", () => {
   it("spannt die Linie über alle Takte des Verses", () => {
     const m = marsch("Zwei Takte", vers([6, 8], 2, dupfenTakt(6, [1, 8]), dupfenTakt(6, [1, 8])));
     const linie = glyphen(m, "notenlinie")[0]!;
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
 
-    expect(linie.x1).toBeLessThan(haelse[0]!.x);
-    expect(linie.x2).toBeGreaterThan(haelse.at(-1)!.x);
+    expect(linie.x1).toBeLessThan(hälse[0]!.x);
+    expect(linie.x2).toBeGreaterThan(hälse.at(-1)!.x);
   });
 });
 
 describe("Schläge im Takt", () => {
   it("zeichnet einen Hals je Schlag, von links nach rechts", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
 
-    expect(haelse).toHaveLength(6);
-    expect(abstaende(haelse.map((h) => h.x)).every((d) => d > 0)).toBe(true);
+    expect(hälse).toHaveLength(6);
+    expect(abstände(hälse.map((h) => h.x)).every((d) => d > 0)).toBe(true);
   });
 
   it("setzt gleich lange Schläge in gleiche Abstände", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
-    const [erster, ...weitere] = abstaende(glyphen(m, "hals").map((h) => h.x));
+    const [erster, ...weitere] = abstände(glyphen(m, "hals").map((h) => h.x));
 
     for (const abstand of weitere) expect(abstand).toBeCloseTo(erster!, 10);
   });
@@ -102,7 +102,7 @@ describe("Schläge im Takt", () => {
         ],
       }),
     );
-    const [a, b, c] = abstaende(glyphen(m, "hals").map((h) => h.x));
+    const [a, b, c] = abstände(glyphen(m, "hals").map((h) => h.x));
 
     expect(b).toBeCloseTo(a!, 10);
     expect(c).toBeCloseTo(a! * 3, 10);
@@ -120,18 +120,18 @@ describe("Schläge im Takt", () => {
 
   it("führt jeden Hals bis auf die Höhe seines Notenkopfes", () => {
     const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
-    const haelse = glyphen(m, "hals");
-    const koepfe = glyphen(m, "notenkopf");
+    const hälse = glyphen(m, "hals");
+    const köpfe = glyphen(m, "notenkopf");
 
-    expect(haelse.map((h) => h.yOben)).toEqual(koepfe.map((k) => k.y));
+    expect(hälse.map((h) => h.yOben)).toEqual(köpfe.map((k) => k.y));
   });
 
   it("setzt den Hals an die linke Flanke des Kopfes, nicht durch dessen Mitte", () => {
     const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
-    const haelse = glyphen(m, "hals");
-    const koepfe = glyphen(m, "notenkopf");
+    const hälse = glyphen(m, "hals");
+    const köpfe = glyphen(m, "notenkopf");
 
-    for (const [hals, kopf] of haelse.map((h, i) => [h, koepfe[i]!] as const)) {
+    for (const [hals, kopf] of hälse.map((h, i) => [h, köpfe[i]!] as const)) {
       const versatz = kopf.x - hals.x;
       // Links der Mitte, aber innerhalb des Kopfes: er steht an dessen Rand.
       expect(versatz).toBeGreaterThan(kopf.breite / 4);
@@ -152,7 +152,7 @@ describe("Schläge im Takt", () => {
     const linie = glyphen(m, "notenlinie")[0]!;
 
     for (const kopf of glyphen(m, "notenkopf")) {
-      const spalt = Math.abs(kopf.y - linie.y) - kopf.hoehe / 2;
+      const spalt = Math.abs(kopf.y - linie.y) - kopf.höhe / 2;
       expect(spalt).toBeGreaterThan(0);
     }
   });
@@ -180,10 +180,10 @@ describe("Notenkopf", () => {
 
   it("gibt jedem Schlag genau einen Kopf, von links nach rechts", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 2, dupfenTakt(6, [1, 8])));
-    const koepfe = glyphen(m, "notenkopf");
+    const köpfe = glyphen(m, "notenkopf");
 
-    expect(koepfe).toHaveLength(6);
-    expect(abstaende(koepfe.map((k) => k.x)).every((d) => d > 0)).toBe(true);
+    expect(köpfe).toHaveLength(6);
+    expect(abstände(köpfe.map((k) => k.x)).every((d) => d > 0)).toBe(true);
   });
 
   it("setzt einen rechten Schlag über die Notenlinie und einen linken darunter", () => {
@@ -205,9 +205,9 @@ describe("Notenkopf", () => {
 
   it("schreibt die Hand nirgends sonst hin — die Höhe sagt sie", () => {
     const m = marsch("Vier Achtel", vers([2, 4], 1, dupfenTakt(4, [1, 8])));
-    const traeger = layout(m).glyphen.filter((g) => "hand" in g);
+    const träger = layout(m).glyphen.filter((g) => "hand" in g);
 
-    expect(traeger.map((g) => g.typ)).toEqual(Array(4).fill("notenkopf"));
+    expect(träger.map((g) => g.typ)).toEqual(Array(4).fill("notenkopf"));
   });
 });
 
@@ -222,18 +222,18 @@ describe("Taktstriche", () => {
     const striche = glyphen(zweiTakte(1), "taktstrich");
 
     expect(striche).toHaveLength(3);
-    expect(abstaende(striche.map((s) => s.x)).every((d) => d > 0)).toBe(true);
+    expect(abstände(striche.map((s) => s.x)).every((d) => d > 0)).toBe(true);
   });
 
   it("umschliesst die Schläge des Verses", () => {
     const m = zweiTakte(1);
     const striche = glyphen(m, "taktstrich");
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
 
-    expect(striche[0]!.x).toBeLessThan(haelse[0]!.x);
-    expect(striche.at(-1)!.x).toBeGreaterThan(haelse.at(-1)!.x);
-    expect(striche[1]!.x).toBeGreaterThan(haelse[5]!.x);
-    expect(striche[1]!.x).toBeLessThan(haelse[6]!.x);
+    expect(striche[0]!.x).toBeLessThan(hälse[0]!.x);
+    expect(striche.at(-1)!.x).toBeGreaterThan(hälse.at(-1)!.x);
+    expect(striche[1]!.x).toBeGreaterThan(hälse[5]!.x);
+    expect(striche[1]!.x).toBeLessThan(hälse[6]!.x);
   });
 
   it("kreuzt die Notenlinie", () => {
@@ -271,7 +271,7 @@ describe("Vers-Kopf", () => {
   );
 
   it("zeigt die Taktart jedes Verses", () => {
-    expect(glyphen(zweiVerse, "taktart").map((t) => [t.zaehler, t.nenner])).toEqual([
+    expect(glyphen(zweiVerse, "taktart").map((t) => [t.zähler, t.nenner])).toEqual([
       [6, 8],
       [2, 4],
     ]);
@@ -316,9 +316,9 @@ describe("Reihenfolge der Verse", () => {
     const linien = glyphen(m, "notenlinie");
     const grenze = (linien[0]!.y + linien[1]!.y) / 2;
     const versVon = (g: Glyph) => (g.typ === "hals" && g.yUnten > grenze ? 2 : 1);
-    const haelse = alle.filter((g) => g.typ === "hals");
+    const hälse = alle.filter((g) => g.typ === "hals");
 
-    expect(haelse.map(versVon)).toEqual([1, 1, 1, 1, 1, 1, 2, 2, 2, 2]);
+    expect(hälse.map(versVon)).toEqual([1, 1, 1, 1, 1, 1, 2, 2, 2, 2]);
   });
 });
 
@@ -347,9 +347,9 @@ describe("Schlepp", () => {
   it("setzt den Vorschlag an den Kopf an, statt über ihm zu schweben", () => {
     const vorschlag = glyphen(m, "vorschlag")[0]!;
     const kopf = glyphen(m, "notenkopf")[0]!;
-    const laenge = vorschlag.yUnten - vorschlag.yOben;
+    const länge = vorschlag.yUnten - vorschlag.yOben;
 
-    expect(kopf.y - vorschlag.yUnten).toBeLessThan(laenge);
+    expect(kopf.y - vorschlag.yUnten).toBeLessThan(länge);
   });
 
   it("zeichnet den Strich auch über einem linken Notenkopf nach oben", () => {
@@ -397,20 +397,20 @@ describe("Punkt", () => {
   });
 
   it("setzt den Punkt rechts neben den Notenkopf, auf dessen Höhe", () => {
-    const koepfe = glyphen(punktiert, "notenkopf");
+    const köpfe = glyphen(punktiert, "notenkopf");
     const punkte = glyphen(punktiert, "punkt");
 
     punkte.forEach((punkt, i) => {
-      expect(punkt.x).toBeGreaterThan(koepfe[i]!.x);
-      expect(punkt.y).toBeCloseTo(koepfe[i]!.y, 10);
+      expect(punkt.x).toBeGreaterThan(köpfe[i]!.x);
+      expect(punkt.y).toBeCloseTo(köpfe[i]!.y, 10);
     });
   });
 
   it("hält den Punkt näher am Kopf als der nächste Schlag steht", () => {
-    const koepfe = glyphen(punktiert, "notenkopf");
+    const köpfe = glyphen(punktiert, "notenkopf");
     const punkt = glyphen(punktiert, "punkt")[0]!;
 
-    expect(punkt.x - koepfe[0]!.x).toBeLessThan(koepfe[1]!.x - koepfe[0]!.x);
+    expect(punkt.x - köpfe[0]!.x).toBeLessThan(köpfe[1]!.x - köpfe[0]!.x);
   });
 
   it("gibt einem unpunktierten Wert keinen Punkt", () => {
@@ -436,24 +436,24 @@ describe("Punkt", () => {
 describe("Balken", () => {
   it("fasst die drei Achtel eines 6/8-Schlages unter einem Balken zusammen", () => {
     const m = marsch("Sechs Achtel", vers([6, 8], 1, dupfenTakt(6, [1, 8])));
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
     const balken = glyphen(m, "balken");
 
     expect(balken).toHaveLength(2);
-    expect(balken[0]!.x1).toBeCloseTo(haelse[0]!.x, 10);
-    expect(balken[0]!.x2).toBeCloseTo(haelse[2]!.x, 10);
-    expect(balken[1]!.x1).toBeCloseTo(haelse[3]!.x, 10);
-    expect(balken[1]!.x2).toBeCloseTo(haelse[5]!.x, 10);
+    expect(balken[0]!.x1).toBeCloseTo(hälse[0]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(hälse[2]!.x, 10);
+    expect(balken[1]!.x1).toBeCloseTo(hälse[3]!.x, 10);
+    expect(balken[1]!.x2).toBeCloseTo(hälse[5]!.x, 10);
   });
 
   it("fasst die Sechzehntel eines 2/4-Taktes je Viertel zusammen", () => {
     const m = marsch("Acht Sechzehntel", vers([2, 4], 1, dupfenTakt(8, [1, 16])));
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
     const balken = glyphen(m, "balken");
 
     expect(balken).toHaveLength(2);
-    expect(balken[0]!.x2).toBeCloseTo(haelse[3]!.x, 10);
-    expect(balken[1]!.x1).toBeCloseTo(haelse[4]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(hälse[3]!.x, 10);
+    expect(balken[1]!.x1).toBeCloseTo(hälse[4]!.x, 10);
   });
 
   it("zieht keinen Balken über den Taktstrich", () => {
@@ -487,12 +487,12 @@ describe("Balken", () => {
         ],
       }),
     );
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
     const balken = glyphen(m, "balken");
 
     expect(balken).toHaveLength(1);
-    expect(balken[0]!.x1).toBeCloseTo(haelse[2]!.x, 10);
-    expect(balken[0]!.x2).toBeCloseTo(haelse[4]!.x, 10);
+    expect(balken[0]!.x1).toBeCloseTo(hälse[2]!.x, 10);
+    expect(balken[0]!.x2).toBeCloseTo(hälse[4]!.x, 10);
   });
 
   it("legt den Balken an die unteren Halsenden, unter die Notenlinie", () => {
@@ -507,22 +507,22 @@ describe("Balken", () => {
 });
 
 describe("Ungültiger Takt", () => {
-  const ueberlaufender = marsch(
+  const überlaufender = marsch(
     "Zu voll",
     vers([6, 8], 1, dupfenTakt(6, [1, 8])),
     vers([2, 4], 1, dupfenTakt(6, [1, 8])),
   );
 
   it("zeichnet einen überlaufenden Takt nicht still, sondern wirft", () => {
-    expect(() => layout(ueberlaufender)).toThrow(UngültigerTaktError);
+    expect(() => layout(überlaufender)).toThrow(UngültigerTaktError);
   });
 
   it("benennt Vers und Takt des Fehlers", () => {
-    expect(() => layout(ueberlaufender)).toThrow(/Vers 2.*Takt 1/);
+    expect(() => layout(überlaufender)).toThrow(/Vers 2.*Takt 1/);
   });
 
   it("nennt die Taktart, die überschritten wurde", () => {
-    expect(() => layout(ueberlaufender)).toThrow(/2\/4/);
+    expect(() => layout(überlaufender)).toThrow(/2\/4/);
   });
 
   it("lässt einen exakt gefüllten Takt durch", () => {
@@ -552,12 +552,12 @@ describe("Wiederholungsklammer", () => {
 
   it("setzt die Punkte nach innen, zwischen Strich und Noten", () => {
     const [anfang] = glyphen(wiederholt, "taktstrich");
-    const haelse = glyphen(wiederholt, "hals");
+    const hälse = glyphen(wiederholt, "hals");
 
     expect(anfang!.punkte).toHaveLength(2);
     for (const punkt of anfang!.punkte) {
       expect(punkt.x).toBeGreaterThan(anfang!.x);
-      expect(punkt.x).toBeLessThan(haelse[0]!.x);
+      expect(punkt.x).toBeLessThan(hälse[0]!.x);
     }
   });
 
@@ -585,10 +585,10 @@ describe("Fahne", () => {
       }),
     );
     const [fahne, ...weitere] = glyphen(m, "fahne");
-    const haelse = glyphen(m, "hals");
+    const hälse = glyphen(m, "hals");
 
     expect(weitere).toEqual([]);
-    expect(fahne!.x).toBeCloseTo(haelse[0]!.x, 10);
+    expect(fahne!.x).toBeCloseTo(hälse[0]!.x, 10);
     expect(fahne!.anzahl).toBe(1);
   });
 

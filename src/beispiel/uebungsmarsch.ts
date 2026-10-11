@@ -31,11 +31,11 @@ const wechselnd = (figuren: readonly Figur[], beginn: Hand, nenner: number): Tak
   ),
 });
 
-export const uebungsmarsch: Marsch = {
+export const übungsmarsch: Marsch = {
   titel: "Übungsmarsch",
   verse: [
     {
-      taktart: { zaehler: 6, nenner: 8 },
+      taktart: { zähler: 6, nenner: 8 },
       wiederholungen: 2,
       takte: [
         // Sechs Achtel — zwei Balkengruppen zu drei.
@@ -61,7 +61,7 @@ export const uebungsmarsch: Marsch = {
       ],
     },
     {
-      taktart: { zaehler: 2, nenner: 4 },
+      taktart: { zähler: 2, nenner: 4 },
       wiederholungen: 1,
       takte: [
         // Acht Sechzehntel — eine Balkengruppe je Viertel.

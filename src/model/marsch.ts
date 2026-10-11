@@ -46,7 +46,7 @@ export interface Takt {
  * die Taktart. 6/8 und 3/4 messen gleich lang und zählen doch verschieden.
  */
 export interface Taktart {
-  readonly zaehler: number;
+  readonly zähler: number;
   readonly nenner: number;
 }
 
@@ -65,19 +65,19 @@ export interface Marsch {
 }
 
 /** Die Länge eines Taktes in Ganzen: 6/8 misst 3/4. */
-export const taktLaenge = (taktart: Taktart): Bruch => bruch(taktart.zaehler, taktart.nenner);
+export const taktLänge = (taktart: Taktart): Bruch => bruch(taktart.zähler, taktart.nenner);
 
 /**
  * Der erste Schlag, der nicht in den Takt passt — vor dem Beginn oder über das
  * Ende hinaus. `undefined`, wenn der Takt gültig ist. Ein überlaufender Takt
  * ist ein Datenfehler und darf nicht still gezeichnet werden.
  */
-export const taktUeberlauf = (takt: Takt, taktart: Taktart): Schlag | undefined => {
-  const laenge = taktLaenge(taktart);
+export const taktÜberlauf = (takt: Takt, taktart: Taktart): Schlag | undefined => {
+  const länge = taktLänge(taktart);
   return takt.schlaege.find(
     (schlag) =>
       vergleiche(schlag.position, NULL) < 0 ||
-      vergleiche(addiere(schlag.position, schlag.wert), laenge) > 0,
+      vergleiche(addiere(schlag.position, schlag.wert), länge) > 0,
   );
 };
 
@@ -95,9 +95,9 @@ export class UngültigerTaktError extends Error {
   ) {
     super(
       `Vers ${versNummer}, Takt ${taktNummer}: ${schlag.figur} auf ` +
-        `${schlag.position.zaehler}/${schlag.position.nenner} mit Wert ` +
-        `${schlag.wert.zaehler}/${schlag.wert.nenner} passt nicht in ` +
-        `${taktart.zaehler}/${taktart.nenner}`,
+        `${schlag.position.zähler}/${schlag.position.nenner} mit Wert ` +
+        `${schlag.wert.zähler}/${schlag.wert.nenner} passt nicht in ` +
+        `${taktart.zähler}/${taktart.nenner}`,
     );
     this.name = "UngültigerTaktError";
   }
@@ -108,12 +108,12 @@ export class UngültigerTaktError extends Error {
  * Vierteln, 2/4 und 3/8 nicht.
  */
 const istZusammengesetzt = (taktart: Taktart): boolean =>
-  taktart.nenner >= 8 && taktart.zaehler > 3 && taktart.zaehler % 3 === 0;
+  taktart.nenner >= 8 && taktart.zähler > 3 && taktart.zähler % 3 === 0;
 
 /**
  * Die Zählzeit einer Taktart: der Grundschlag, nach dem gruppiert und gebalkt
  * wird. Ungerade Taktarten wie 5/8 gruppieren in der Praxis 3+2 oder 2+3; bis
  * die Gruppierung im Modell steht, zählen sie hier schlicht in Achteln.
  */
-export const zaehlzeit = (taktart: Taktart): Bruch =>
+export const zählzeit = (taktart: Taktart): Bruch =>
   istZusammengesetzt(taktart) ? bruch(3, taktart.nenner) : bruch(1, taktart.nenner);

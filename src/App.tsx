@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { uebungsmarsch } from "./beispiel/uebungsmarsch";
+import { übungsmarsch } from "./beispiel/uebungsmarsch";
 import { abspielplan } from "./playback/abspielplan";
 import type { Wiedergabe } from "./playback/wiedergabe";
 import { spiele } from "./playback/wiedergabe";
@@ -14,10 +14,10 @@ export const App = () => {
   const wiedergabe = useRef<Wiedergabe | null>(null);
 
   const tempo = Number(tempoEingabe);
-  const tempoGueltig = tempoEingabe.trim() !== "" && Number.isFinite(tempo) && tempo > 0;
+  const tempoGültig = tempoEingabe.trim() !== "" && Number.isFinite(tempo) && tempo > 0;
 
   const abspielen = () => {
-    wiedergabe.current = spiele(abspielplan(uebungsmarsch, tempo), () => setSpielt(false));
+    wiedergabe.current = spiele(abspielplan(übungsmarsch, tempo), () => setSpielt(false));
     setSpielt(true);
   };
 
@@ -32,7 +32,7 @@ export const App = () => {
   return (
     <main>
       <div className="steuerung">
-        <button type="button" onClick={abspielen} disabled={spielt || !tempoGueltig}>
+        <button type="button" onClick={abspielen} disabled={spielt || !tempoGültig}>
           Play
         </button>
         <button type="button" onClick={anhalten} disabled={!spielt}>
@@ -49,7 +49,7 @@ export const App = () => {
           Zählzeiten pro Minute
         </label>
       </div>
-      <Zündstoffnoten marsch={uebungsmarsch} />
+      <Zündstoffnoten marsch={übungsmarsch} />
     </main>
   );
 };

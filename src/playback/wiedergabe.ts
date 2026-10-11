@@ -21,7 +21,7 @@ const AUSKLANG = 0.12;
 /** Mitte des Bandpasses: das Schnarren des Fells, nicht der Kessel. */
 const FILTER_FREQUENZ = 2200;
 /** Breite des Bandpasses: eher breit, damit es rauscht und nicht pfeift. */
-const FILTER_GUETE = 0.8;
+const FILTER_GÜTE = 0.8;
 const SPITZENPEGEL = 0.8;
 
 export interface Wiedergabe {
@@ -30,8 +30,8 @@ export interface Wiedergabe {
 }
 
 const rauschen = (kontext: AudioContext): AudioBuffer => {
-  const laenge = Math.ceil(kontext.sampleRate * AUSKLANG);
-  const puffer = kontext.createBuffer(1, laenge, kontext.sampleRate);
+  const länge = Math.ceil(kontext.sampleRate * AUSKLANG);
+  const puffer = kontext.createBuffer(1, länge, kontext.sampleRate);
   const daten = puffer.getChannelData(0);
   for (let i = 0; i < daten.length; i++) daten[i] = Math.random() * 2 - 1;
   return puffer;
@@ -56,10 +56,10 @@ export const spiele = (plan: readonly Anschlag[], beiEnde: () => void): Wiederga
     const filter = kontext.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.value = FILTER_FREQUENZ;
-    filter.Q.value = FILTER_GUETE;
+    filter.Q.value = FILTER_GÜTE;
 
     const pegel = kontext.createGain();
-    pegel.gain.setValueAtTime(SPITZENPEGEL * anschlag.lautstaerke, zeit);
+    pegel.gain.setValueAtTime(SPITZENPEGEL * anschlag.lautstärke, zeit);
     pegel.gain.exponentialRampToValueAtTime(0.001, zeit + AUSKLANG);
 
     quelle.connect(filter).connect(pegel).connect(kontext.destination);

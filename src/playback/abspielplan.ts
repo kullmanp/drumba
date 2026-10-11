@@ -3,10 +3,10 @@ import { addiere, alsZahl, dividiere, NULL } from "../model/bruch";
 import type { Hand, Marsch } from "../model/marsch";
 import {
   andereHand,
-  taktLaenge,
-  taktUeberlauf,
+  taktLänge,
+  taktÜberlauf,
   UngültigerTaktError,
-  zaehlzeit,
+  zählzeit,
 } from "../model/marsch";
 
 /**
@@ -24,7 +24,7 @@ export interface Anschlag {
   readonly zeit: number;
   readonly hand: Hand;
   /** 1 ist volle Lautstärke. */
-  readonly lautstaerke: number;
+  readonly lautstärke: number;
 }
 
 /**
@@ -35,7 +35,7 @@ export interface Anschlag {
 export const VORSCHLAG_VORLAUF = 0.03;
 
 /** Der Vorschlag klingt deutlich leiser als der Hauptschlag. Nach Gehör gewählt. */
-const VORSCHLAG_LAUTSTAERKE = 0.5;
+const VORSCHLAG_LAUTSTÄRKE = 0.5;
 
 /**
  * Der Abspielplan eines Marsches. `tempo` zählt Zählzeiten pro Minute, in jeder
@@ -46,35 +46,35 @@ export const abspielplan = (marsch: Marsch, tempo: number): Anschlag[] => {
   // Ein überlaufender Takt ist ein Datenfehler und wird nicht still gespielt.
   marsch.verse.forEach((vers, versIndex) => {
     vers.takte.forEach((takt, taktIndex) => {
-      const ueberlauf = taktUeberlauf(takt, vers.taktart);
-      if (ueberlauf) {
-        throw new UngültigerTaktError(versIndex + 1, taktIndex + 1, ueberlauf, vers.taktart);
+      const überlauf = taktÜberlauf(takt, vers.taktart);
+      if (überlauf) {
+        throw new UngültigerTaktError(versIndex + 1, taktIndex + 1, überlauf, vers.taktart);
       }
     });
   });
 
-  const sekunden = (zaehlzeiten: Bruch): number => (alsZahl(zaehlzeiten) * 60) / tempo;
-  const anschlaege: Anschlag[] = [];
+  const sekunden = (zählzeiten: Bruch): number => (alsZahl(zählzeiten) * 60) / tempo;
+  const anschläge: Anschlag[] = [];
   let taktbeginn = NULL;
   for (const vers of marsch.verse) {
-    const zaehlzeitLaenge = zaehlzeit(vers.taktart);
+    const zählzeitLänge = zählzeit(vers.taktart);
     // Wiederholungen werden ausgerollt; Voltas und Schluss gibt es noch nicht.
     const takte = Array.from({ length: vers.wiederholungen }, () => vers.takte).flat();
     for (const takt of takte) {
       for (const schlag of takt.schlaege) {
-        const zeit = sekunden(addiere(taktbeginn, dividiere(schlag.position, zaehlzeitLaenge)));
+        const zeit = sekunden(addiere(taktbeginn, dividiere(schlag.position, zählzeitLänge)));
         if (schlag.figur === "Schlepp") {
-          anschlaege.push({
+          anschläge.push({
             zeit: zeit - VORSCHLAG_VORLAUF,
             hand: andereHand(schlag.hand),
-            lautstaerke: VORSCHLAG_LAUTSTAERKE,
+            lautstärke: VORSCHLAG_LAUTSTÄRKE,
           });
         }
-        anschlaege.push({ zeit, hand: schlag.hand, lautstaerke: 1 });
+        anschläge.push({ zeit, hand: schlag.hand, lautstärke: 1 });
       }
-      taktbeginn = addiere(taktbeginn, dividiere(taktLaenge(vers.taktart), zaehlzeitLaenge));
+      taktbeginn = addiere(taktbeginn, dividiere(taktLänge(vers.taktart), zählzeitLänge));
     }
   }
   // Bei hohem Tempo fällt ein Vorschlag vor den vorigen Schlag.
-  return anschlaege.sort((a, b) => a.zeit - b.zeit);
+  return anschläge.sort((a, b) => a.zeit - b.zeit);
 };
